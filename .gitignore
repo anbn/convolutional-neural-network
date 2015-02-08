@@ -1,0 +1,10 @@
+.DS_Store
+
+Build/
+data/
+
+*.png
+*.jpg
+
+*.swp
+*.BAK

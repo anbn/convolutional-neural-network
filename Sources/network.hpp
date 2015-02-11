@@ -112,6 +112,10 @@ class network {
             layers.push_back(l);
         }
 
+        const std::vector< layer<sigmoid> >& get_layers() const {
+            return layers;
+        }
+
         const vec_t forward_propagate(const vec_t& in) {
 
             auto iter = std::begin(layers);

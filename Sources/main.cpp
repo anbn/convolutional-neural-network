@@ -51,10 +51,13 @@ main(int argc, const char *argv[])
         float error = 0.0;
         for (int i=0; i<soll.size(); i++)
             error += (soll[i]-output[i])*(soll[i]-output[i]);
-       
-        std::cout<< s << "   error: "<<error<<"\n";
 
         mlp.back_propagate(input, soll);
+        
+        std::cout<< s << "   error: "<<error<<"\n";
+
+        for (int j=0; j<mlp.get_layers()[0].weights().size(); j++)
+            std::cout<<mlp.get_layers()[0].weights()[j]<<" ";
     }
 }
 

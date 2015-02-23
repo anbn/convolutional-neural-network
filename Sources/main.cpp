@@ -56,8 +56,8 @@ main(int argc, const char *argv[])
         
         std::cout<< s << "   error: "<<error<<"\n";
 
-        for (int j=0; j<mlp.get_layers()[0].weights().size(); j++)
-            std::cout<<mlp.get_layers()[0].weights()[j]<<" ";
+        //for (int j=0; j<mlp.get_layers()[0].weights().size(); j++)
+        //    std::cout<<mlp.get_layers()[0].weights()[j]<<" ";
     }
 }
 

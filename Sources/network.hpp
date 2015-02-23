@@ -101,6 +101,79 @@ private:
 };
 
 
+//------------------------------------------------------------------------------
+
+class connection_table {
+
+public:
+    connection_table() : rows_(0), cols_(0) {};
+    connection_table(const bool *ar, size_t rows, size_t cols) : connected_(rows * cols), rows_(rows), cols_(cols) {
+        std::copy(ar, ar + rows * cols, connected_.begin());
+    };
+
+    bool is_connected(int x, int y) {
+        return is_empty() ? true : connected_[y * cols_ + x];
+    }
+
+    bool is_empty() {
+        return rows_==0 && cols_==0;
+    }    
+
+private:
+    std::vector<bool> connected_;
+    size_t rows_;
+    size_t cols_;
+};
+
+/* A: ActivationFunction, N: number od feature maps */
+template <typename ActivationFunction = sigmoid, typename N = size_t>
+class convolutional_layer {
+
+public:
+    convolutional_layer();
+
+    void feed_forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
+        
+        assert(in_width == out_width_+filter_width_-1);
+        assert(in.size() == in_feature_maps * in_width * in_width);
+
+        for (int fm=0; fm<out_feature_maps_; fm++) {
+
+            for (int ox=0; ox<out_width_; ox++) {
+                for (int oy=0; oy<out_width_; oy++) {
+
+                    float_t sum = 0.0;
+                    for (int in_fm=0; in_fm<in_feature_maps; in_fm++) {
+
+                        for (int wx=0; wx<filter_width_; wx++) {
+                            for (int wy=0; wy<filter_width_; wy++) {
+
+                                if (connection_.is_connected(in_fm, fm))
+                                    sum += weights_[filter_width_*filter_width_*fm + filter_width_*wx + wy] * in[in_width*in_width*in_fm + in_width*ox + oy];
+                            }
+                        }
+                        output_[(out_width_*out_width_)*fm + out_width_*ox + oy] = A_.f(sum + bias_[fm]);
+                    }
+                }
+            }
+        }
+    }
+
+private:
+    
+    ActivationFunction A_;
+
+    connection_table connection_;
+    size_t out_feature_maps_;
+    size_t out_width_;
+    size_t filter_width_;
+    vec_t weights_;     /* [feature_map * filter_width * filter_width] */
+    vec_t gradients_;   /* [feature_map * filter_width * filter_width]*/
+    vec_t bias_;        /* [feature_map] */
+
+    vec_t output_;      /* [feature_map * out_width * out_width] */
+};
+
 class network {
 
     public:

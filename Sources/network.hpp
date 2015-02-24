@@ -128,37 +128,40 @@ private:
 };
 
 template <typename ActivationFunction = sigmoid>
-class subsampling_layer : layer {
+class subsampling_layer : public layer {
 
 public:
 
-    subsampling_layer(int in_dim, int out_dim, size_t out_feature_maps) : layer(in_dim, out_dim), out_feature_maps_(out_feature_maps) {
+    subsampling_layer(int in_width, int out_width, size_t out_feature_maps)
+            : layer(in_width*in_width, out_width*out_width),
+            out_feature_maps_(out_feature_maps),
+            in_width_(in_width), out_width_(out_width) {
 
-        assert(in_dim == out_dim*2);
+        assert(in_width == out_width_*2);
         
-        std::cout<<"DEBUG: subsampling_layer(" <<in_dim<<","<<out_dim<<","<<out_feature_maps_<<")\n";
-        weights_.resize(out_feature_maps_ * out_dim_ * out_dim_);
-        output_.resize(out_dim*out_dim);
-        bias_.resize(out_dim);
+        std::cout<<"DEBUG: subsampling_layer(" <<in_width_<<","<<out_width_<<","<<out_feature_maps_<<")\n";
+        weights_.resize(out_feature_maps_ * out_width_ * out_width_);
+        output_.resize(out_feature_maps_ * out_width_ * out_width_);
+        bias_.resize(out_width_ * out_width_);
         resetWeights();
     }
 
     void feed_forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
         
         assert(in_feature_maps == out_feature_maps_);
-        assert(in_width == out_dim_*2);
-        assert(in.size() == in_feature_maps * in_width * in_width);
+        assert(in_width == out_width_*2);
+        assert(in.size() == in_feature_maps * in_width_ * in_width_);
 
         for (int fm=0; fm<out_feature_maps_; fm++) {
             
-            for (int ox=0; ox<out_dim_; ox++) {
-                for (int oy=0; oy<out_dim_; oy++) {
-                    output_[(out_dim_*out_dim_)*fm + out_dim_*ox + oy] =
+            for (int ox=0; ox<out_width_; ox++) {
+                for (int oy=0; oy<out_width_; oy++) {
+                    output_[(out_width_*out_width_)*fm + out_width_*ox + oy] =
                             A_.f(  (in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )] +
                                     in[(in_width*in_width)*fm + (2*in_width*ox-1) + (2*oy  )] + 
                                     in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy-1)] + 
                                     in[(in_width*in_width)*fm + (2*in_width*ox-1) + (2*oy-1)]) * 
-                                    weights_[(out_dim_*out_dim_)*fm + (out_dim_*ox) + oy] +                     
+                                    weights_[(out_width_*out_width_)*fm + (out_width_*ox) + oy] +                     
                                     bias_[fm] );
                 }
             }
@@ -170,6 +173,7 @@ private:
     ActivationFunction A_;
 
     size_t out_feature_maps_;
+    size_t in_width_, out_width_;
 };
 
 

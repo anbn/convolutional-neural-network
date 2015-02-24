@@ -43,13 +43,16 @@ main(int argc, const char *argv[])
         test[32*i+16] = 0.2;
         test[32*20+i] = 0.5;
     }
-    Image<my_nn::float_t> img1(32,32,std::begin(test),std::end(test));
-    cv::imshow("C1 input", img1.toIntensity().exportMat());
+    Image<my_nn::float_t> img0(32,32,std::begin(test),std::end(test));
+    cv::imshow("C1 input", img0.toIntensity().exportMat());
 
     C1.feed_forward(1 /*in_fm*/, 32, test);
+    S2.feed_forward(2 /*in_fm*/, 28, C1.output());
 
-    Image<my_nn::float_t> img(28, 28*2, std::begin(C1.output()), std::end(C1.output()));
-    cv::imshow("C1 output", img.toIntensity(0,1).exportMat());
+    Image<my_nn::float_t> img1(28, 28*2, std::begin(C1.output()), std::end(C1.output()));
+    cv::imshow("C1 output", img1.toIntensity(0,1).exportMat());
+    Image<my_nn::float_t> img2(14, 14*2, std::begin(S2.output()), std::end(S2.output()));
+    cv::imshow("S2 output", img2.toIntensity(0,1).exportMat());
 
 
     while(cv::waitKey(0)!=27);

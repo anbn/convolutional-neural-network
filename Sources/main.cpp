@@ -38,23 +38,42 @@ main(int argc, const char *argv[])
     
     vec_t test(32*32);
     for(int i=0; i<32; i++){
-        test[32*i+i] = 1;
-        test[(32*i+i+1)%(32*32)] = 1;
+        if(i<5 || i>10) {
+            test[32*i+i-1] = 0.5;
+            test[32*i+i]   = 0.8;
+            test[32*i+i+1] = 1.0;
+        }
         test[32*i+16] = 0.2;
         test[32*20+i] = 0.5;
     }
-    Image<my_nn::float_t> img0(32,32,std::begin(test),std::end(test));
-    cv::imshow("C1 input", img0.toIntensity().exportMat());
+    Image<my_nn::float_t> img_in(32,32,std::begin(test),std::end(test));
+    //cv::imshow("C1 input", img_in.toIntensity().exportMat());
 
-    C1.feed_forward(1 /*in_fm*/, 32, test);
-    S2.feed_forward(2 /*in_fm*/, 28, C1.output());
-
-    Image<my_nn::float_t> img1(28, 28*2, std::begin(C1.output()), std::end(C1.output()));
-    cv::imshow("C1 output", img1.toIntensity(0,1).exportMat());
-    Image<my_nn::float_t> img2(14, 14*2, std::begin(S2.output()), std::end(S2.output()));
-    cv::imshow("S2 output", img2.toIntensity(0,1).exportMat());
+    C1.feed_forward(1 /*in_fm*/, 32 /*in_width*/, test);
+    S2.feed_forward(2 /*in_fm*/, 28 /*in_width*/, C1.output());
+    C3.feed_forward(2 /*in_fm*/, 14 /*in_width*/, S2.output());
+    S4.feed_forward(5 /*in_fm*/, 12 /*in_width*/, C3.output());
+    C5.feed_forward(5 /*in_fm*/,  6 /*in_width*/, S4.output());
 
 
+    cv::Mat img(cv::Size(512,100), CV_8UC1, 100);
+
+    print_vec("TEST: ", C1.output());
+    
+
+    Image<my_nn::float_t> img_c1(28, 28*2, std::begin(C1.output()), std::end(C1.output()));
+    Image<my_nn::float_t> img_s2(14, 14*2, std::begin(S2.output()), std::end(S2.output()));
+    Image<my_nn::float_t> img_c3(12, 12*5, std::begin(C3.output()), std::end(C3.output()));
+    Image<my_nn::float_t> img_s4( 6,  6*5, std::begin(S4.output()), std::end(S4.output()));
+    Image<my_nn::float_t> img_c5( 1,  1*5, std::begin(C5.output()), std::end(C5.output()));
+    
+    img_in.toIntensity( 0,1).exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
+    img_c1.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect( 50,0,img_c1.width(), img_c1.height())));
+    img_s2.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(100,0,img_s2.width(), img_s2.height())));
+    img_c3.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(150,0,img_c3.width(), img_c3.height())));
+    img_s4.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(200,0,img_s4.width(), img_s4.height())));
+
+    cv::imshow("out", img);
     while(cv::waitKey(0)!=27);
     std::cout<<"Hallo Welt\n";
     return 0;

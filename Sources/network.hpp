@@ -158,11 +158,12 @@ public:
                 for (int oy=0; oy<out_width_; oy++) {
                     output_[(out_width_*out_width_)*fm + out_width_*ox + oy] =
                             A_.f(  (in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )] +
-                                    in[(in_width*in_width)*fm + (2*in_width*ox-1) + (2*oy  )] + 
-                                    in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy-1)] + 
-                                    in[(in_width*in_width)*fm + (2*in_width*ox-1) + (2*oy-1)]) * 
+                                    in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )] + 
+                                    in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)] + 
+                                    in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)]))*0.25;
+                    /* 
                                     weights_[(out_width_*out_width_)*fm + (out_width_*ox) + oy] +                     
-                                    bias_[fm] );
+                                    bias_[fm] );*/
                 }
             }
         }

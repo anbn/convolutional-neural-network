@@ -19,6 +19,13 @@ public:
 
     Image() : width_(0), height_(0) {}
     Image(size_t width, size_t height) : width_(width), height_(height), data_(width * height, 0) {}
+   
+    template <typename AccessIterator>
+    Image(size_t width, size_t height, AccessIterator iter_begin, AccessIterator iter_end)
+        : width_(width), height_(height), data_(width * height, 0) {
+
+        std::copy(iter_begin, iter_end, std::begin(data_));
+    }
 
     size_t width() const { return width_; }
     size_t height() const { return height_; }
@@ -81,19 +88,24 @@ public:
     }
     
 
-    Image<intensity_t> toIntensity() {
+    Image<intensity_t> toIntensity(T min, T max) {
         
         Image<intensity_t> result(width_, height_);
-        auto pair_minmax = std::minmax_element(std::begin(this->data_), std::end(this->data_));
 
         for (int w=0; w<width_; w++) {
             for (int h=0; h<height_; h++) {
-                result.data()[h*width_+w] = static_cast<intensity_t>((data_[h * width_ + w]-*pair_minmax.first)/(*pair_minmax.second-*pair_minmax.first)*255.0);
+                result.data()[h*width_+w] = static_cast<intensity_t>((data_[h * width_ + w]-min)/(max-min)*255.0);
             }
         }
 
         return result;
     }
+
+    Image<intensity_t> toIntensity() {
+        auto pair_minmax = std::minmax_element(std::begin(this->data_), std::end(this->data_));
+        return toIntensity(*pair_minmax.first, *pair_minmax.second);
+    }
+
 
     void importMat(cv::Mat img) {
         this->resize(img.cols, img.rows);

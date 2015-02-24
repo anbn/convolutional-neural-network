@@ -5,9 +5,9 @@
 
 template<typename T>
 inline T uniform_rand(T min, T max) {
-    static std::mt19937 gen(0);
+    static std::mt19937  mt_rand(time(0));
     std::uniform_real_distribution<T> dst(min, max);
-    return dst(gen);
+    return dst(mt_rand);
 }
 
 template<typename Iter>

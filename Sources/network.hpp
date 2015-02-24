@@ -3,13 +3,13 @@
 
 #include "utils.hpp"
 #include "activation.hpp"
+#include "image.hpp"
 
 namespace my_nn {
 
-typedef std::vector<float_t> vec_t;
 typedef double float_t;
+typedef std::vector<float_t> vec_t;
 
-template <typename A = sigmoid>
 class layer {
     
 public:
@@ -19,83 +19,24 @@ public:
 
     const vec_t& output() const { return output_; };
     const vec_t& weights() const { return weights_; };
-    const vec_t& delta() const { return delta_; };
-
-    typedef A ActivationFunction;
-    
-    layer(int in_dim, int out_dim) : in_dim_(in_dim), out_dim_(out_dim) {
-        weights_.resize(in_dim*out_dim);
-        output_.resize(out_dim);
-        delta_.resize(out_dim);
-        bias_.resize(out_dim);
-        resetWeights();
-    }
 
     void resetWeights() {
         uniform_rand(std::begin(weights_), std::end(weights_), -1.0, 1.0);
         uniform_rand(std::begin(bias_), std::end(bias_), -1.0, 1.0);
     }
 
-    const vec_t& forward_propagate(const vec_t& in) {
-        
-        assert(in.size()==in_dim_);
+    layer(int in_dim, int out_dim) : in_dim_(in_dim), out_dim_(out_dim) {}
 
-        for (int o=0; o<output_.size(); o++) {
-            float_t sum = 0.0;
-            for (int i=0; i<in.size(); i++) {
-                sum += in[i] * weights_[o*in_dim_ + i];
-            }
-            output_[o] = A_.f(sum + bias_[o]);
-        }
-        return output_;
-    }  
-    
-    /* only to be used for the last layer */
-    void back_propagate_last(const vec_t& in, const vec_t& soll) {
-        
-        assert(soll.size()==out_dim_);
-        assert(in.size()==in_dim_);
+protected:
 
-        for (int o=0; o<output_.size(); o++) {
-            for (int i=0; i<in.size(); i++) {
-                delta_[o] = (soll[o] - output_[o]) * A_.df(output_[o]);
-                weights_[o*in_dim_ + i] += learning_rate * delta_[o] * in[i];
-            }
-            bias_[o] += learning_rate * delta_[o] * 1.0;
-        }
-    }  
-    
-    /* to be used with every layer except the last */
-    void back_propagate(const vec_t& in, layer<sigmoid>& next) {
-        
-        assert(in.size()==in_dim_);
-        assert(next.in_dim()==out_dim_);
+    size_t in_dim_;
+    size_t out_dim_;
 
-        for (int o=0; o<output_.size(); o++) {
+    vec_t weights_;     /* [feature_map * filter_width * filter_width] */
+    vec_t gradients_;   /* [feature_map * filter_width * filter_width] */
+    vec_t bias_;        /* [feature_map] */
 
-            float_t sum = 0;
-            for (int k=0; k<next.delta().size(); k++)
-                sum += next.delta()[k] * next.weights()[o*out_dim_ + k];
-            
-            for (int i=0; i<in.size(); i++) {
-                delta_[o] = output_[o] * A_.df(output_[o]) * sum;
-                weights_[o*in_dim_ + i] += learning_rate * delta_[o] * in[i];
-            }
-            bias_[o] += learning_rate * delta_[o] * 1.0;
-        }
-    }  
-
-private:
-
-    ActivationFunction A_;
-
-    int in_dim_;
-    int out_dim_;
-    vec_t weights_;
-    vec_t bias_;
-
-    vec_t output_;
-    vec_t delta_;
+    vec_t output_;      /* [feature_map * out_dim_ * out_dim_] */
 
     float_t learning_rate = 0.01;
 };
@@ -103,38 +44,52 @@ private:
 
 //------------------------------------------------------------------------------
 
-class connection_table {
 
-public:
-    connection_table() : rows_(0), cols_(0) {};
-    connection_table(const bool *ar, size_t rows, size_t cols) : connected_(rows * cols), rows_(rows), cols_(cols) {
-        std::copy(ar, ar + rows * cols, connected_.begin());
+/* A: ActivationFunction */
+template <typename ActivationFunction = sigmoid>
+class convolutional_layer : public layer {
+
+    class connection_table {
+
+    public:
+        connection_table() : rows_(0), cols_(0) {};
+        connection_table(const bool *ar, size_t rows, size_t cols) : connected_(rows * cols), rows_(rows), cols_(cols) {
+            std::copy(ar, ar + rows * cols, connected_.begin());
+        };
+
+        bool is_connected(int x, int y) {
+            return is_empty() ? true : connected_[y * cols_ + x];
+        }
+
+        bool is_empty() {
+            return rows_==0 && cols_==0;
+        }    
+
+    private:
+        std::vector<bool> connected_;
+        size_t rows_;
+        size_t cols_;
     };
 
-    bool is_connected(int x, int y) {
-        return is_empty() ? true : connected_[y * cols_ + x];
-    }
-
-    bool is_empty() {
-        return rows_==0 && cols_==0;
-    }    
-
-private:
-    std::vector<bool> connected_;
-    size_t rows_;
-    size_t cols_;
-};
-
-/* A: ActivationFunction, N: number od feature maps */
-template <typename ActivationFunction = sigmoid>
-class convolutional_layer {
-
+    
 public:
-    convolutional_layer();
+
+    convolutional_layer(size_t in_width, size_t out_width, size_t out_feature_maps)
+            : layer(in_width*in_width, out_width*out_width),
+            out_feature_maps_(out_feature_maps),
+            in_width_(in_width), out_width_(out_width) {
+        std::cout<<"DEBUG: convolutional_layer(" <<in_width<<","<<out_width<<","<<out_feature_maps_<<")\n";
+        filter_width_ = in_width-out_width+1;
+
+        weights_.resize(out_feature_maps_ * filter_width_ * filter_width_);
+        output_.resize(out_feature_maps_ * out_width_ * out_width_);
+        bias_.resize(out_width_*out_width_);
+        resetWeights();
+    }
 
     void feed_forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
         
-        assert(in_width == out_width_+filter_width_-1);
+        assert(in_width == in_width_);
         assert(in.size() == in_feature_maps * in_width * in_width);
 
         for (int fm=0; fm<out_feature_maps_; fm++) {
@@ -145,15 +100,18 @@ public:
                     float_t sum = 0.0;
                     for (int in_fm=0; in_fm<in_feature_maps; in_fm++) {
 
-                        for (int wx=0; wx<filter_width_; wx++) {
-                            for (int wy=0; wy<filter_width_; wy++) {
-
-                                if (connection_.is_connected(in_fm, fm))
-                                    sum += weights_[filter_width_*filter_width_*fm + filter_width_*wx + wy] * in[in_width*in_width*in_fm + in_width*ox + oy];
+                        //if (!connection_.is_connected(in_fm, fm))
+                        //    continue;
+                       
+                        for (int fx=0; fx<filter_width_; fx++) {
+                            for (int fy=0; fy<filter_width_; fy++) {
+                                
+                                sum +=  weights_[in_width_*in_width_*fm + filter_width_*fx + fy] *
+                                        in[in_width_*in_width_*in_fm + in_width_*ox + oy];
                             }
                         }
-                        output_[(out_width_*out_width_)*fm + out_width_*ox + oy] = A_.f(sum + bias_[fm]);
                     }
+                    output_[(out_width_*out_width_)*fm + out_width_*ox + oy] = A_.f(sum + bias_[fm]);
                 }
             }
         }
@@ -165,36 +123,42 @@ private:
 
     connection_table connection_;
     size_t out_feature_maps_;
-    size_t out_width_;
     size_t filter_width_;
-    vec_t weights_;     /* [feature_map * filter_width * filter_width] */
-    vec_t gradients_;   /* [feature_map * filter_width * filter_width] */
-    vec_t bias_;        /* [feature_map] */
-
-    vec_t output_;      /* [feature_map * out_width * out_width] */
+    size_t in_width_, out_width_;
 };
 
 template <typename ActivationFunction = sigmoid>
-class subsampling_layer {
+class subsampling_layer : layer {
 
 public:
+
+    subsampling_layer(int in_dim, int out_dim, size_t out_feature_maps) : layer(in_dim, out_dim), out_feature_maps_(out_feature_maps) {
+
+        assert(in_dim == out_dim*2);
+        
+        std::cout<<"DEBUG: subsampling_layer(" <<in_dim<<","<<out_dim<<","<<out_feature_maps_<<")\n";
+        weights_.resize(out_feature_maps_ * out_dim_ * out_dim_);
+        output_.resize(out_dim*out_dim);
+        bias_.resize(out_dim);
+        resetWeights();
+    }
 
     void feed_forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
         
         assert(in_feature_maps == out_feature_maps_);
-        assert(in_width == out_width_*2);
+        assert(in_width == out_dim_*2);
         assert(in.size() == in_feature_maps * in_width * in_width);
 
         for (int fm=0; fm<out_feature_maps_; fm++) {
             
-            for (int ox=0; ox<out_width_; ox++) {
-                for (int oy=0; oy<out_width_; oy++) {
-                    output_[(out_width_*out_width_)*fm + out_width_*ox + oy] =
+            for (int ox=0; ox<out_dim_; ox++) {
+                for (int oy=0; oy<out_dim_; oy++) {
+                    output_[(out_dim_*out_dim_)*fm + out_dim_*ox + oy] =
                             A_.f(  (in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )] +
                                     in[(in_width*in_width)*fm + (2*in_width*ox-1) + (2*oy  )] + 
                                     in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy-1)] + 
                                     in[(in_width*in_width)*fm + (2*in_width*ox-1) + (2*oy-1)]) * 
-                                    weights_[(out_width_*out_width_)*fm + (out_width_*ox) + oy] +                     
+                                    weights_[(out_dim_*out_dim_)*fm + (out_dim_*ox) + oy] +                     
                                     bias_[fm] );
                 }
             }
@@ -202,28 +166,31 @@ public:
     }
     
 private:
+    
     ActivationFunction A_;
 
     size_t out_feature_maps_;
-    size_t out_width_;
-    size_t filter_width_;
-    vec_t weights_;     /* [feature_map * filter_width * filter_width] */
-    vec_t gradients_;   /* [feature_map * filter_width * filter_width] */
-    vec_t bias_;        /* [feature_map] */
-
-    vec_t output_;      /* [feature_map * out_width * out_width] */
 };
 
 
 template <typename ActivationFunction = sigmoid>
-class output_layer {
+class output_layer : layer {
 
 public:
+
+    output_layer(size_t in_dim, size_t out_dim) : layer(in_dim, out_dim) {
+        std::cout<<"DEBUG: output_layer(" <<in_dim<<","<<out_dim<<")\n";
+        weights_.resize(in_dim_ * out_dim_);
+        output_.resize(out_dim);
+        bias_.resize(out_dim);
+        resetWeights();
+    };
+
 
     void feed_forward(size_t in_dim, const vec_t& in /*[in_dim]*/) {
         
         assert(in_dim == in_dim_);
-        assert(in.size() == in_dim * in_dim);
+        assert(in.size() == in_dim);
 
         for (int o=0; o<out_dim_; o++) {
             
@@ -235,55 +202,7 @@ public:
         }
     }
     
-private:
     ActivationFunction A_;
-
-    size_t out_dim_;
-    size_t in_dim_;
-    vec_t weights_;     /* [in_dim_ * out_dim_] */
-    vec_t gradients_;   /* [in_dim_ * out_dim_] */
-    vec_t bias_;        /* [out_dim_] */
-
-    vec_t output_;      /* [out_dim_] */
-};
-
-class network {
-
-    public:
-
-        void add_layer(layer<sigmoid> l) {
-            if (!layers.empty())
-                assert(l.in_dim() == layers.back().out_dim());
-
-            layers.push_back(l);
-        }
-
-        const std::vector< layer<sigmoid> >& get_layers() const {
-            return layers;
-        }
-
-        const vec_t forward_propagate(const vec_t& in) {
-
-            auto iter = std::begin(layers);
-
-            vec_t output = iter->forward_propagate(in);
-
-            while (++iter != std::end(layers)) {
-                output = iter->forward_propagate(output);
-            }
-            return output;
-        }
-
-        void back_propagate(const vec_t in, const vec_t soll) {
-            layers[2].back_propagate_last(layers[1].output(), soll);
-            layers[1].back_propagate(layers[0].output(), layers[2]);
-            layers[0].back_propagate(in, layers[1]);
-        }
-
-    private:
-
-        std::vector< layer<sigmoid> > layers;
-
 };
 
 } /* namespace my_nn */

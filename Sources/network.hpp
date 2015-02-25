@@ -107,13 +107,12 @@ public:
                        
                         for (int fx=0; fx<filter_width_; fx++) {
                             for (int fy=0; fy<filter_width_; fy++) {
-                                
-                                sum += weights_[((in_feature_maps_*in_fm+fm)*out_feature_maps_+fx)*filter_width_+fy] *
+                                sum += weights_[((out_feature_maps_*in_fm+fm)*in_feature_maps_+fx)*filter_width_+fy] *
                                           in[in_width_*in_width_*in_fm + in_width_*(ox+fx) + (oy+fy)];
                             }
                         }
                     }
-                    output_[(out_width_*out_width_)*fm + out_width_*ox + oy] = A_.f(sum + bias_[fm]);
+                    output_[(out_width_*fm + ox)*out_width_ + oy] = A_.f(sum + bias_[fm]);
                 }
             }
         }
@@ -182,7 +181,7 @@ private:
 
 
 template <typename ActivationFunction = sigmoid>
-class output_layer : layer {
+class output_layer : public layer {
 
 public:
 

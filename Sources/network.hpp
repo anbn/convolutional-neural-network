@@ -32,8 +32,8 @@ protected:
     size_t in_dim_;
     size_t out_dim_;
 
-    vec_t weights_;     /* [feature_map * filter_width * filter_width] */
-    vec_t gradients_;   /* [feature_map * filter_width * filter_width] */
+    vec_t weights_;     /* variable size */
+    vec_t gradients_;   /* same size as weights */
     vec_t bias_;        /* [feature_map] */
 
     vec_t output_;      /* [feature_map * out_dim_ * out_dim_] */
@@ -74,14 +74,15 @@ class convolutional_layer : public layer {
     
 public:
 
-    convolutional_layer(size_t in_width, size_t out_width, size_t out_feature_maps)
+    convolutional_layer(size_t in_width, size_t out_width, size_t in_feature_maps, size_t out_feature_maps)
             : layer(in_width*in_width, out_width*out_width),
-            out_feature_maps_(out_feature_maps),
+            in_feature_maps_(in_feature_maps),out_feature_maps_(out_feature_maps),
             in_width_(in_width), out_width_(out_width) {
-        std::cout<<"DEBUG: convolutional_layer(" <<in_width<<","<<out_width<<","<<out_feature_maps_<<")\n";
+        std::cout<<"DEBUG: convolutional_layer(" <<in_width<<","<<out_width<<","<<in_feature_maps<<","<<out_feature_maps_<<")\n";
         filter_width_ = in_width-out_width+1;
 
-        weights_.resize(out_feature_maps_ * filter_width_ * filter_width_);
+        weights_.resize(in_feature_maps * out_feature_maps_ * filter_width_ * filter_width_);
+        gradients_.resize(in_feature_maps * out_feature_maps_ * filter_width_ * filter_width_);
         output_.resize(out_feature_maps_ * out_width_ * out_width_);
         bias_.resize(out_width_*out_width_);
         resetWeights();
@@ -90,6 +91,7 @@ public:
     void feed_forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
         
         assert(in_width == in_width_);
+        assert(in_feature_maps == in_feature_maps_);
         assert(in.size() == in_feature_maps * in_width * in_width);
 
         for (int fm=0; fm<out_feature_maps_; fm++) {
@@ -106,8 +108,8 @@ public:
                         for (int fx=0; fx<filter_width_; fx++) {
                             for (int fy=0; fy<filter_width_; fy++) {
                                 
-                                sum +=  weights_[in_width_*in_width_*fm + filter_width_*fx + fy] *
-                                        in[in_width_*in_width_*in_fm + in_width_*ox + oy];
+                                sum += weights_[((in_feature_maps_*in_fm+fm)*out_feature_maps_+fx)*filter_width_+fy] *
+                                          in[in_width_*in_width_*in_fm + in_width_*(ox+fx) + (oy+fy)];
                             }
                         }
                     }
@@ -122,9 +124,9 @@ private:
     ActivationFunction A_;
 
     connection_table connection_;
-    size_t out_feature_maps_;
-    size_t filter_width_;
+    size_t in_feature_maps_,out_feature_maps_;
     size_t in_width_, out_width_;
+    size_t filter_width_;
 };
 
 template <typename ActivationFunction = sigmoid>
@@ -141,6 +143,7 @@ public:
         
         std::cout<<"DEBUG: subsampling_layer(" <<in_width_<<","<<out_width_<<","<<out_feature_maps_<<")\n";
         weights_.resize(out_feature_maps_ * out_width_ * out_width_);
+        gradients_.resize(out_feature_maps_ * out_width_ * out_width_);
         output_.resize(out_feature_maps_ * out_width_ * out_width_);
         bias_.resize(out_width_ * out_width_);
         resetWeights();
@@ -156,14 +159,14 @@ public:
             
             for (int ox=0; ox<out_width_; ox++) {
                 for (int oy=0; oy<out_width_; oy++) {
-                    output_[(out_width_*out_width_)*fm + out_width_*ox + oy] =
-                            A_.f(  (in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )] +
-                                    in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )] + 
-                                    in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)] + 
-                                    in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)]))*0.25;
-                    /* 
-                                    weights_[(out_width_*out_width_)*fm + (out_width_*ox) + oy] +                     
-                                    bias_[fm] );*/
+                    float_t sum =
+                        (in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )] +
+                         in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )] + 
+                         in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)] + 
+                         in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)])*0.25; /* 
+                        weights_[(out_width_*out_width_)*fm + (out_width_*ox) + oy] +          
+                        bias_[fm]*/
+                    output_[(out_width_*out_width_)*fm + out_width_*ox + oy] = A_.f( sum );
                 }
             }
         }
@@ -186,6 +189,7 @@ public:
     output_layer(size_t in_dim, size_t out_dim) : layer(in_dim, out_dim) {
         std::cout<<"DEBUG: output_layer(" <<in_dim<<","<<out_dim<<")\n";
         weights_.resize(in_dim_ * out_dim_);
+        gradients_.resize(in_dim_ * out_dim_);
         output_.resize(out_dim);
         bias_.resize(out_dim);
         resetWeights();

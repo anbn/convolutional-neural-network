@@ -29,23 +29,25 @@ main(int argc, const char *argv[])
     vec_t soll {1,0,1,0};
     vec_t output;
 
-    convolutional_layer<sigmoid> C1(32,28,2);
+    convolutional_layer<sigmoid> C1(32,28,1,2);
     subsampling_layer<sigmoid> S2(28,14,2);
-    convolutional_layer<sigmoid> C3(14,12,5);
+    convolutional_layer<sigmoid> C3(14,12,2,5);
     subsampling_layer<sigmoid> S4(12,6,5);
-    convolutional_layer<sigmoid> C5(6,1,5);
+    convolutional_layer<sigmoid> C5(6,1,5,5);
     output_layer<sigmoid> O6(5,1);
     
     vec_t test(32*32);
     for(int i=0; i<32; i++){
-        if(i<5 || i>10) {
+        if(i>10) {
             test[32*i+i-1] = 0.5;
             test[32*i+i]   = 0.8;
             test[32*i+i+1] = 1.0;
         }
-        test[32*i+16] = 0.2;
-        test[32*20+i] = 0.5;
+        test[32*20+i] = 1.0;
+        test[32*i+20] = 1.0;
     }
+    test[32*5+5] = 1.0;
+    
     Image<my_nn::float_t> img_in(32,32,std::begin(test),std::end(test));
     //cv::imshow("C1 input", img_in.toIntensity().exportMat());
 
@@ -58,8 +60,7 @@ main(int argc, const char *argv[])
 
     cv::Mat img(cv::Size(512,100), CV_8UC1, 100);
 
-    print_vec("TEST: ", C1.output());
-    
+    //print_vec("TEST: ", C1.output());
 
     Image<my_nn::float_t> img_c1(28, 28*2, std::begin(C1.output()), std::end(C1.output()));
     Image<my_nn::float_t> img_s2(14, 14*2, std::begin(S2.output()), std::end(S2.output()));
@@ -73,9 +74,8 @@ main(int argc, const char *argv[])
     img_c3.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(150,0,img_c3.width(), img_c3.height())));
     img_s4.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(200,0,img_s4.width(), img_s4.height())));
 
-    cv::imshow("out", img);
+    cv::imshow("cnn", img);
     while(cv::waitKey(0)!=27);
-    std::cout<<"Hallo Welt\n";
     return 0;
 }
 

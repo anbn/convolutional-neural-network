@@ -34,7 +34,7 @@ main(int argc, const char *argv[])
     convolutional_layer<sigmoid> C3(14,12,2,5);
     subsampling_layer<sigmoid> S4(12,6,5);
     convolutional_layer<sigmoid> C5(6,1,5,5);
-    output_layer<sigmoid> O6(5,2);
+    fullyconnected_layer<sigmoid> O6(5,2);
     
     vec_t test(32*32);
     for(int i=0; i<32; i++){
@@ -51,12 +51,12 @@ main(int argc, const char *argv[])
     Image<my_nn::float_t> img_in(32,32,std::begin(test),std::end(test));
     //cv::imshow("C1 input", img_in.toIntensity().exportMat());
 
-    C1.feed_forward(1 /*in_fm*/, 32 /*in_width*/, test);
-    S2.feed_forward(2 /*in_fm*/, 28 /*in_width*/, C1.output());
-    C3.feed_forward(2 /*in_fm*/, 14 /*in_width*/, S2.output());
-    S4.feed_forward(5 /*in_fm*/, 12 /*in_width*/, C3.output());
-    C5.feed_forward(5 /*in_fm*/,  6 /*in_width*/, S4.output());
-    O6.feed_forward(5 /*in_dim*/, C5.output());
+    C1.forward(1 /*in_fm*/, 32 /*in_width*/, test);
+    S2.forward(2 /*in_fm*/, 28 /*in_width*/, C1.output());
+    C3.forward(2 /*in_fm*/, 14 /*in_width*/, S2.output());
+    S4.forward(5 /*in_fm*/, 12 /*in_width*/, C3.output());
+    C5.forward(5 /*in_fm*/,  6 /*in_width*/, S4.output());
+    O6.forward(5 /*in_dim*/, C5.output());
 
 
     cv::Mat img(cv::Size(400,100), CV_8UC1, 100);

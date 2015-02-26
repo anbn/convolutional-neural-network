@@ -18,6 +18,7 @@ public:
     int out_dim() const { return out_dim_; }
 
     const vec_t& output() const { return output_; };
+    const vec_t& delta() const { return delta_; };
     const vec_t& weights() const { return weights_; };
 
     void resetWeights() {
@@ -32,8 +33,8 @@ protected:
     size_t in_dim_;
     size_t out_dim_;
 
-    vec_t weights_;     /* variable size */
-    vec_t gradients_;   /* same size as weights */
+    vec_t weights_;     /* variable size, depending on layer type */
+    vec_t delta_;       /* [out_dim_] */
     vec_t bias_;        /* [feature_map] */
 
     vec_t output_;      /* [feature_map * out_dim_ * out_dim_] */
@@ -82,13 +83,13 @@ public:
         filter_width_ = in_width-out_width+1;
 
         weights_.resize(in_feature_maps * out_feature_maps_ * filter_width_ * filter_width_);
-        gradients_.resize(in_feature_maps * out_feature_maps_ * filter_width_ * filter_width_);
+        delta_.resize(in_feature_maps * out_feature_maps_ * filter_width_ * filter_width_);
         output_.resize(out_feature_maps_ * out_width_ * out_width_);
         bias_.resize(out_width_*out_width_);
         resetWeights();
     }
 
-    void feed_forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
+    void forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
         
         assert(in_width == in_width_);
         assert(in_feature_maps == in_feature_maps_);
@@ -142,13 +143,13 @@ public:
         
         std::cout<<"DEBUG: subsampling_layer(" <<in_width_<<","<<out_width_<<","<<out_feature_maps_<<")\n";
         weights_.resize(out_feature_maps_ * out_width_ * out_width_);
-        gradients_.resize(out_feature_maps_ * out_width_ * out_width_);
+        delta_.resize(out_feature_maps_ * out_width_ * out_width_);
         output_.resize(out_feature_maps_ * out_width_ * out_width_);
         bias_.resize(out_width_ * out_width_);
         resetWeights();
     }
 
-    void feed_forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
+    void forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
         
         assert(in_feature_maps == out_feature_maps_);
         assert(in_width == out_width_*2);
@@ -159,13 +160,19 @@ public:
             for (int ox=0; ox<out_width_; ox++) {
                 for (int oy=0; oy<out_width_; oy++) {
                     
-                    float_t sum =
+                    /* Average Pooling */
+                       float_t sum =
                         (in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )] +
                          in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )] + 
                          in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)] + 
                          in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)])*0.25; /* 
-                        weights_[(out_width_*out_width_)*fm + (out_width_*ox) + oy] +          
-                        bias_[fm]*/
+                        weights_[(out_width_*out_width_)*fm + (out_width_*ox) + oy] + bias_[fm] */
+                   
+                    /* Max Pooling 
+                       float_t sum = std::max(
+                        std::max(in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )], in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )]), 
+                        std::max(in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)], in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)]));
+                    */
                     output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( sum );
                 }
             }
@@ -182,21 +189,21 @@ private:
 
 
 template <typename ActivationFunction = sigmoid>
-class output_layer : public layer {
+class fullyconnected_layer : public layer {
 
 public:
 
-    output_layer(size_t in_dim, size_t out_dim) : layer(in_dim, out_dim) {
-        std::cout<<"DEBUG: output_layer(" <<in_dim<<","<<out_dim<<")\n";
+    fullyconnected_layer(size_t in_dim, size_t out_dim) : layer(in_dim, out_dim) {
+        std::cout<<"DEBUG: fullyconnected_layer(" <<in_dim<<","<<out_dim<<")\n";
         weights_.resize(in_dim_ * out_dim_);
-        gradients_.resize(in_dim_ * out_dim_);
+        delta_.resize(in_dim_ * out_dim_);
         output_.resize(out_dim);
         bias_.resize(out_dim);
         resetWeights();
     };
 
 
-    void feed_forward(size_t in_dim, const vec_t& in /*[in_dim]*/) {
+    void forward(size_t in_dim, const vec_t& in /*[in_dim]*/) {
         
         assert(in_dim == in_dim_);
         assert(in.size() == in_dim);
@@ -210,7 +217,43 @@ public:
             output_[o] = A_.f(sum + bias_[o]);
         }
     }
+
+    /* backpropagation for any layer except the last one */
+    void backward(const layer& previous_layer, const layer& next_layer) {
+
+        assert(previous_layer.out_dim()==in_dim_);
+        assert(next_layer.in_dim()==out_dim_);
+
+        for (int o=0; o<out_dim_; o++) {
+
+            float_t sum = 0;
+            for (int k=0; k<next_layer.out_dim(); k++)
+                sum += next_layer.delta()[k] * next_layer.weights()[o*out_dim_ + k];
+
+            for (int i=0; i<in_dim_; i++) {
+                delta_[o] = output_[o] * A_.df(output_[o]) * sum;
+                weights_[o*in_dim_ + i] += learning_rate * delta_[o] * previous_layer.output()[i];
+            }
+            bias_[o] += learning_rate * delta_[o] * 1.0;
+        }
+    }  
+
     
+    /* backpropagation for the last layer */
+    void backward_last(const layer& previous_layer, const vec_t& soll) {
+        
+        assert(previous_layer.out_dim()==in_dim_);
+        assert(soll.size()==out_dim_);
+
+        for (int o=0; o<out_dim_; o++) {
+            for (int i=0; i<in_dim_; i++) {
+                delta_[o] = (soll[o] - output_[o]) * A_.df(output_[o]);
+                weights_[i*out_dim_ + o] += learning_rate * delta_[o] * previous_layer.output()[i];
+            }
+            bias_[o] += learning_rate * delta_[o] * 1.0;
+        } 
+    }
+
     ActivationFunction A_;
 };
 

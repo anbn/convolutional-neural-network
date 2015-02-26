@@ -212,27 +212,28 @@ public:
             
             float_t sum=0.0;
             for (int i=0; i<in_dim_; i++) {
-                sum += in[i] * weights_[ i*out_dim_ + o];
+                sum += in[i] * weights_[ o*in_dim_ + i];
             }
             output_[o] = A_.f(sum + bias_[o]);
         }
     }
 
     /* backpropagation for any layer except the last one */
-    void backward(const layer& previous_layer, const layer& next_layer) {
+    void backward(const vec_t& in, const layer& next_layer) {
 
-        assert(previous_layer.out_dim()==in_dim_);
+        assert(in.size()==in_dim_);
         assert(next_layer.in_dim()==out_dim_);
 
         for (int o=0; o<out_dim_; o++) {
 
             float_t sum = 0;
             for (int k=0; k<next_layer.out_dim(); k++)
-                sum += next_layer.delta()[k] * next_layer.weights()[o*out_dim_ + k];
+                sum += next_layer.delta()[k] * next_layer.weights()[ o*next_layer.out_dim()+ k];
 
             for (int i=0; i<in_dim_; i++) {
-                delta_[o] = output_[o] * A_.df(output_[o]) * sum;
-                weights_[o*in_dim_ + i] += learning_rate * delta_[o] * previous_layer.output()[i];
+                //delta_[o] = output_[o] * A_.df(output_[o]) * sum; // check at home
+                delta_[o] = A_.df(output_[o]) * sum;
+                weights_[o*in_dim_ + i] += learning_rate * delta_[o] * in[i];
             }
             bias_[o] += learning_rate * delta_[o] * 1.0;
         }
@@ -240,7 +241,7 @@ public:
 
     
     /* backpropagation for the last layer */
-    void backward_last(const layer& previous_layer, const vec_t& soll) {
+    void backward(const layer& previous_layer, const vec_t& soll) {
         
         assert(previous_layer.out_dim()==in_dim_);
         assert(soll.size()==out_dim_);
@@ -248,7 +249,7 @@ public:
         for (int o=0; o<out_dim_; o++) {
             for (int i=0; i<in_dim_; i++) {
                 delta_[o] = (soll[o] - output_[o]) * A_.df(output_[o]);
-                weights_[i*out_dim_ + o] += learning_rate * delta_[o] * previous_layer.output()[i];
+                weights_[o*in_dim_ + i] += learning_rate * delta_[o] * previous_layer.output()[i];
             }
             bias_[o] += learning_rate * delta_[o] * 1.0;
         } 

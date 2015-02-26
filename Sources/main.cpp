@@ -14,17 +14,63 @@ using namespace my_nn;
 
 void print_vec(std::string s, vec_t v) {
     std::cout<<s;
-    int i=0;
     for (auto e : v) {
-        std::cout<<(i++)<<" "<<e<<"   ";
+        std::cout<<" "<<e;
     }
     std::cout<<"\n";
+}
+
+
+void
+fullyconnected_test()
+{
+    fullyconnected_layer<sigmoid> L1(4,8);
+    fullyconnected_layer<sigmoid> L2(8,6);
+    fullyconnected_layer<sigmoid> L3(6,4);
+
+    vec_t input {0.0, 1.0, 1.0, 0.0};
+    vec_t soll {1,0,1,0};
+
+    for(int s=0; s<1000000; s++) {
+
+        uniform_rand(input.begin(), input.end(), 0, 1);
+        for (auto& v : input) {
+            v = v<0.5 ? 0 : 1;
+        }
+        soll = input;
+        std::reverse(soll.begin(), soll.end());
+
+        L1.forward(4, input);
+        L2.forward(8, L1.output());
+        L3.forward(6, L2.output());
+
+        float error = 0.0;
+        for (int i=0; i<soll.size(); i++) {
+            error += (soll[i]-L3.output()[i])*(soll[i]-L3.output()[i]);
+        }
+        
+        if(s>200000) {
+            print_vec("INPUT: ", input);
+            print_vec("SOLL:  ", soll);
+            print_vec("IST:   ", L3.output());
+        }
+        std::cout<< s << "   error: "<<error<<"\n";
+
+        L3.backward(L2, soll);
+        L2.backward(L1.output(), L3);
+        L1.backward(input, L2);
+    }
+
 }
 
 
 int
 main(int argc, const char *argv[])
 {
+
+    fullyconnected_test(); return 0;
+
+
     vec_t input {0.0, 1.0, 1.0, 0.0};
     vec_t soll {1,0,1,0};
     vec_t output;

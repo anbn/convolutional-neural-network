@@ -107,12 +107,12 @@ public:
                        
                         for (int fx=0; fx<filter_width_; fx++) {
                             for (int fy=0; fy<filter_width_; fy++) {
-                                sum += weights_[((out_feature_maps_*in_fm+fm)*in_feature_maps_+fx)*filter_width_+fy] *
-                                          in[in_width_*in_width_*in_fm + in_width_*(ox+fx) + (oy+fy)];
+                                sum += weights_[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy] * 
+                                          in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
                             }
                         }
                     }
-                    output_[(out_width_*fm + ox)*out_width_ + oy] = A_.f(sum + bias_[fm]);
+                    output_[(fm*out_width_+ ox)*out_width_ + oy] = A_.f(sum + bias_[fm]);
                 }
             }
         }
@@ -158,6 +158,7 @@ public:
             
             for (int ox=0; ox<out_width_; ox++) {
                 for (int oy=0; oy<out_width_; oy++) {
+                    
                     float_t sum =
                         (in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )] +
                          in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )] + 
@@ -165,7 +166,7 @@ public:
                          in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)])*0.25; /* 
                         weights_[(out_width_*out_width_)*fm + (out_width_*ox) + oy] +          
                         bias_[fm]*/
-                    output_[(out_width_*out_width_)*fm + out_width_*ox + oy] = A_.f( sum );
+                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( sum );
                 }
             }
         }
@@ -204,7 +205,7 @@ public:
             
             float_t sum=0.0;
             for (int i=0; i<in_dim_; i++) {
-                sum += in[i] * weights_[ in_dim_*o + i];
+                sum += in[i] * weights_[ i*out_dim_ + o];
             }
             output_[o] = A_.f(sum + bias_[o]);
         }

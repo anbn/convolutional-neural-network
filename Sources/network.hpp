@@ -22,16 +22,16 @@ public:
     const vec_t& weights() const { return weights_; };
 
     void resetWeights() {
-        uniform_rand(std::begin(weights_), std::end(weights_), -1.0, 1.0);
-        uniform_rand(std::begin(bias_), std::end(bias_), -1.0, 1.0);
+        randomize(std::begin(weights_), std::end(weights_), -1.0, 1.0);
+        randomize(std::begin(bias_), std::end(bias_), -1.0, 1.0);
     }
 
     layer(int in_dim, int out_dim, int weights_dim) : in_dim_(in_dim), out_dim_(out_dim) {
         //std::cout<<"DEBUG: layer("<<in_dim<<","<<out_dim<<","<<weights_dim<<")\n";
         weights_.resize(weights_dim);
-        delta_.resize(out_dim_);
         output_.resize(out_dim);
         bias_.resize(out_dim);
+        delta_.resize(out_dim_);
         resetWeights();
     }
 
@@ -83,7 +83,7 @@ class convolutional_layer : public layer {
 public:
 
     convolutional_layer(size_t in_width, size_t out_width, size_t in_feature_maps, size_t out_feature_maps)
-            : layer(in_width*in_width, out_width*out_width, in_feature_maps * out_feature_maps * (in_width-out_width+1)*(in_width-out_width+1)),
+            : layer(in_feature_maps*in_width*in_width, out_feature_maps*out_width*out_width, in_feature_maps * out_feature_maps * (in_width-out_width+1)*(in_width-out_width+1)),
             in_feature_maps_(in_feature_maps),out_feature_maps_(out_feature_maps),
             in_width_(in_width), out_width_(out_width),
             filter_width_(in_width-out_width+1) {
@@ -94,7 +94,7 @@ public:
         
         assert(in_width == in_width_);
         assert(in_feature_maps == in_feature_maps_);
-        assert(in.size() == in_feature_maps * in_width * in_width);
+        assert(in.size() == in_feature_maps_ * in_width_ * in_width_);
 
         for (int fm=0; fm<out_feature_maps_; fm++) {
 
@@ -120,6 +120,16 @@ public:
         }
     }
 
+    void backward(const vec_t& in, const layer& next_layer) {
+
+        assert(in.size()==in_feature_maps_ * in_width_ * in_width_);
+        assert(next_layer.in_dim()==out_dim_);
+
+        for (int o=0; o<out_dim_; o++) {
+        
+        }
+    }
+
 private:
     
     ActivationFunction A_;
@@ -135,27 +145,23 @@ class subsampling_layer : public layer {
 
 public:
 
-    subsampling_layer(int in_width, int out_width, size_t out_feature_maps)
-            : layer(in_width*in_width, out_width*out_width, out_feature_maps * out_width * out_width),
-            out_feature_maps_(out_feature_maps),
+    subsampling_layer(int in_width, int out_width, size_t feature_maps)
+            : layer(feature_maps*in_width*in_width, feature_maps*out_width*out_width, feature_maps * in_width * in_width),
+            feature_maps_(feature_maps),
             in_width_(in_width), out_width_(out_width) {
 
-        assert(in_width == out_width_*2);
+        assert(in_width == out_width*2);
         
-        std::cout<<"DEBUG: subsampling_layer(" <<in_width_<<","<<out_width_<<","<<out_feature_maps_<<")\n";
-        delta_.resize(out_feature_maps_ * out_width_ * out_width_);
-        output_.resize(out_feature_maps_ * out_width_ * out_width_);
-        bias_.resize(out_width_ * out_width_);
-        resetWeights();
+        std::cout<<"DEBUG: subsampling_layer(" <<in_width_<<","<<out_width_<<","<<feature_maps_<<")\n";
     }
 
     void forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
         
-        assert(in_feature_maps == out_feature_maps_);
+        assert(in_feature_maps == feature_maps_);
         assert(in_width == out_width_*2);
-        assert(in.size() == in_feature_maps * in_width_ * in_width_);
+        assert(in.size() == feature_maps_ * in_width_ * in_width_);
 
-        for (int fm=0; fm<out_feature_maps_; fm++) {
+        for (int fm=0; fm<feature_maps_; fm++) {
             
             for (int ox=0; ox<out_width_; ox++) {
                 for (int oy=0; oy<out_width_; oy++) {
@@ -183,7 +189,7 @@ private:
     
     ActivationFunction A_;
 
-    size_t out_feature_maps_;
+    size_t feature_maps_;   /* feature_maps_ == in_feature_maps_ == out_feature_maps_ */
     size_t in_width_, out_width_;
 };
 
@@ -193,7 +199,8 @@ class fullyconnected_layer : public layer {
 
 public:
 
-    fullyconnected_layer(size_t in_dim, size_t out_dim) : layer(in_dim, out_dim, in_dim*out_dim) {
+    fullyconnected_layer(size_t in_dim, size_t out_dim)
+        : layer(in_dim, out_dim, in_dim*out_dim) {
         std::cout<<"DEBUG: fullyconnected_layer(" <<in_dim<<","<<out_dim<<")\n";
     };
 
@@ -249,6 +256,13 @@ public:
             bias_[o] += learning_rate * delta_[o] * 1.0;
         } 
     }
+
+    /* TODO
+    template<typename BackwardFunction>
+    vec_t finite_difference_testing(int i, int o, BackwardFunction _Bf){
+        vec_t gradients;
+
+    }*/
 
     ActivationFunction A_;
 };

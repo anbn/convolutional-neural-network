@@ -33,7 +33,7 @@ fullyconnected_test()
 
     for(int s=0; s<1000000; s++) {
 
-        uniform_rand(input.begin(), input.end(), 0, 1);
+        randomize(input.begin(), input.end(), 0, 1);
         for (auto& v : input) {
             v = v<0.5 ? 0 : 1;
         }
@@ -68,7 +68,7 @@ int
 main(int argc, const char *argv[])
 {
 
-    fullyconnected_test(); return 0;
+    // fullyconnected_test(); return 0;
 
 
     vec_t input {0.0, 1.0, 1.0, 0.0};
@@ -84,7 +84,7 @@ main(int argc, const char *argv[])
     
     vec_t test(32*32);
     for(int i=0; i<32; i++){
-        if(i>10) {
+        if(i>12) {
             test[32*i+i-1] = 0.5;
             test[32*i+i]   = 0.8;
             test[32*i+i+1] = 1.0;
@@ -93,6 +93,7 @@ main(int argc, const char *argv[])
         test[32*i+20] = 1.0;
     }
     test[32*5+5] = 1.0;
+    test[32*6+14] = 1.0;
     
     Image<my_nn::float_t> img_in(32,32,std::begin(test),std::end(test));
     //cv::imshow("C1 input", img_in.toIntensity().exportMat());

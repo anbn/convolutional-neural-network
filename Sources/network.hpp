@@ -125,10 +125,18 @@ public:
         assert(in.size()==in_feature_maps_ * in_width_ * in_width_);
         assert(next_layer.in_dim()==out_dim_);
 
-        for (int o=0; o<out_dim_; o++) {
+        for (int fm=0; fm<out_feature_maps_; fm++) {
             
-            //delta[o] = 
+            float_t sum = 0.0;
+            for (int o=0; o<out_dim_; o++) {
+                delta_[o] = A_.df(output_[o]) * next_layer.delta()[o] * next_layer.weights()[o];
+                //weights_[]
+                
+                sum += delta_[o];
+            }
+            //bias_[o] = learning_rate * sum;
         }
+
     }
 
 private:
@@ -136,7 +144,7 @@ private:
     ActivationFunction A_;
 
     connection_table connection_;
-    size_t in_feature_maps_,out_feature_maps_;
+    size_t in_feature_maps_, out_feature_maps_;
     size_t in_width_, out_width_;
     size_t filter_width_;
 };
@@ -178,7 +186,7 @@ public:
                         std::max(in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )], in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )]), 
                         std::max(in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)], in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)]));
                     */
-                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( weights_[(fm*out_width_ + ox)*out_width_ + oy]*sum +0* bias_[(fm*out_width_ + ox)*out_width_ + oy]);
+                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( weights_[(fm*out_width_ + ox)*out_width_ + oy]*sum + bias_[(fm*out_width_ + ox)*out_width_ + oy]);
                 }
             }
         }
@@ -230,10 +238,10 @@ public:
             float_t sum = 0;
             for (int k=0; k<next_layer.out_dim(); k++)
                 sum += next_layer.delta()[k] * next_layer.weights()[ o*next_layer.out_dim()+ k];
-
+            //delta_[o] = output_[o] * A_.df(output_[o]) * sum; // check at home
+            delta_[o] = A_.df(output_[o]) * sum;
+           
             for (int i=0; i<in_dim_; i++) {
-                //delta_[o] = output_[o] * A_.df(output_[o]) * sum; // check at home
-                delta_[o] = A_.df(output_[o]) * sum;
                 weights_[o*in_dim_ + i] += learning_rate * delta_[o] * in[i];
             }
             bias_[o] += learning_rate * delta_[o] * 1.0;
@@ -248,8 +256,10 @@ public:
         assert(soll.size()==out_dim_);
 
         for (int o=0; o<out_dim_; o++) {
+
+            delta_[o] = (soll[o] - output_[o]) * A_.df(output_[o]);
+            
             for (int i=0; i<in_dim_; i++) {
-                delta_[o] = (soll[o] - output_[o]) * A_.df(output_[o]);
                 weights_[o*in_dim_ + i] += learning_rate * delta_[o] * previous_layer.output()[i];
             }
             bias_[o] += learning_rate * delta_[o] * 1.0;

@@ -49,6 +49,8 @@ fullyconnected_test()
             error += (soll[i]-L3.output()[i])*(soll[i]-L3.output()[i]);
         }
         
+        if(error<0.01) exit(0);
+
         if(s>200000) {
             print_vec("INPUT: ", input);
             print_vec("SOLL:  ", soll);
@@ -126,9 +128,9 @@ int
 main(int argc, const char *argv[])
 {
 
-    // fullyconnected_test(); return 0;
+    fullyconnected_test(); return 0;
     
-    cnn_test();
+    //cnn_test();
 
     return 0;
 }

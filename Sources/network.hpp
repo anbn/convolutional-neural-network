@@ -14,8 +14,8 @@ class layer {
     
 public:
 
-    int in_dim() const { return in_dim_; }
-    int out_dim() const { return out_dim_; }
+    size_t in_dim() const { return in_dim_; }
+    size_t out_dim() const { return out_dim_; }
 
     const vec_t& output() const { return output_; };
     const vec_t& delta() const { return delta_; };
@@ -26,11 +26,11 @@ public:
         randomize(std::begin(bias_), std::end(bias_), -1.0, 1.0);
     }
 
-    layer(int in_dim, int out_dim, int weights_dim) : in_dim_(in_dim), out_dim_(out_dim) {
+    layer(size_t in_dim, size_t out_dim, size_t bias_dim, size_t weights_dim) : in_dim_(in_dim), out_dim_(out_dim) {
         //std::cout<<"DEBUG: layer("<<in_dim<<","<<out_dim<<","<<weights_dim<<")\n";
         weights_.resize(weights_dim);
         output_.resize(out_dim);
-        bias_.resize(out_dim);
+        bias_.resize(bias_dim);
         delta_.resize(out_dim_);
         resetWeights();
     }
@@ -83,7 +83,7 @@ class convolutional_layer : public layer {
 public:
 
     convolutional_layer(size_t in_width, size_t out_width, size_t in_feature_maps, size_t out_feature_maps)
-            : layer(in_feature_maps*in_width*in_width, out_feature_maps*out_width*out_width, in_feature_maps * out_feature_maps * (in_width-out_width+1)*(in_width-out_width+1)),
+            : layer(in_feature_maps*in_width*in_width, out_feature_maps*out_width*out_width, out_feature_maps, in_feature_maps*out_feature_maps*(in_width-out_width+1)*(in_width-out_width+1)),
             in_feature_maps_(in_feature_maps),out_feature_maps_(out_feature_maps),
             in_width_(in_width), out_width_(out_width),
             filter_width_(in_width-out_width+1) {
@@ -124,15 +124,29 @@ public:
 
         assert(in.size()==in_feature_maps_ * in_width_ * in_width_);
         assert(next_layer.in_dim()==out_dim_);
+        assert(next_layer.in_dim()==next_layer.out_dim()*4); /* true for any 2*2 subsampling_layer */
 
         for (int fm=0; fm<out_feature_maps_; fm++) {
             
             float_t sum = 0.0;
+            for (int ox=0; ox<out_width_; ox++) {
+                for (int oy=0; oy<out_width_; oy++) {
+                    int oindex = (fm*out_width_+ ox)*out_width_ + oy;
+                    //delta_[oindex] = A_.df(output_[oindex]) * 
+                    //    next_layer.delta()[(in_width*in_width)*fm + (2*in_width*ox) + (2*oy)] * next_layer.weights()[o];
+                }
+            }
+
+
+
             for (int o=0; o<out_dim_; o++) {
-                delta_[o] = A_.df(output_[o]) * next_layer.delta()[o] * next_layer.weights()[o];
-                //weights_[]
-                
+
                 sum += delta_[o];
+                
+                for (int i=0; i<in_dim_; i++) {
+                    //weights_[]
+                }
+                
             }
             //bias_[o] = learning_rate * sum;
         }
@@ -154,8 +168,8 @@ class subsampling_layer : public layer {
 
 public:
 
-    subsampling_layer(int in_width, int out_width, size_t feature_maps)
-            : layer(feature_maps*in_width*in_width, feature_maps*out_width*out_width, feature_maps*out_width*out_width),
+    subsampling_layer(size_t in_width, size_t out_width, size_t feature_maps)
+            : layer(feature_maps*in_width*in_width, feature_maps*out_width*out_width, feature_maps, feature_maps*out_width*out_width),
             feature_maps_(feature_maps),
             in_width_(in_width), out_width_(out_width) {
 
@@ -174,11 +188,11 @@ public:
             
             for (int ox=0; ox<out_width_; ox++) {
                 for (int oy=0; oy<out_width_; oy++) {
-                    
-                    float_t sum =   in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )] +
-                                    in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )] + 
-                                    in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)] + 
-                                    in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)];
+
+                    float_t sum =   in[(fm*in_width + (2*ox  ))*in_width + (2*oy  )] +
+                                    in[(fm*in_width + (2*ox+1))*in_width + (2*oy  )] + 
+                                    in[(fm*in_width + (2*ox  ))*in_width + (2*oy+1)] + 
+                                    in[(fm*in_width + (2*ox+1))*in_width + (2*oy+1)];
                    
                     /* Average Pooling, if all weights == 0.25 for 2*2 block */
                     /* Max Pooling 
@@ -186,7 +200,7 @@ public:
                         std::max(in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )], in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )]), 
                         std::max(in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)], in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)]));
                     */
-                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( weights_[(fm*out_width_ + ox)*out_width_ + oy]*sum + bias_[(fm*out_width_ + ox)*out_width_ + oy]);
+                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( weights_[fm]*sum + bias_[fm] );
                 }
             }
         }
@@ -207,7 +221,7 @@ class fullyconnected_layer : public layer {
 public:
 
     fullyconnected_layer(size_t in_dim, size_t out_dim)
-        : layer(in_dim, out_dim, in_dim*out_dim) {
+        : layer(in_dim, out_dim, out_dim, in_dim*out_dim) {
         std::cout<<"DEBUG: fullyconnected_layer(" <<in_dim<<","<<out_dim<<")\n";
     };
 
@@ -238,8 +252,8 @@ public:
             float_t sum = 0;
             for (int k=0; k<next_layer.out_dim(); k++)
                 sum += next_layer.delta()[k] * next_layer.weights()[ o*next_layer.out_dim()+ k];
-            //delta_[o] = output_[o] * A_.df(output_[o]) * sum; // check at home
-            delta_[o] = A_.df(output_[o]) * sum;
+            
+            delta_[o] = A_.df(output_[o]) * sum; //vs. delta_[o] = output_[o] * A_.df(output_[o]) * sum; // check at home
            
             for (int i=0; i<in_dim_; i++) {
                 weights_[o*in_dim_ + i] += learning_rate * delta_[o] * in[i];

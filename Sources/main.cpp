@@ -128,9 +128,9 @@ int
 main(int argc, const char *argv[])
 {
 
-    fullyconnected_test(); return 0;
+    //fullyconnected_test(); return 0;
     
-    //cnn_test();
+    cnn_test();
 
     return 0;
 }

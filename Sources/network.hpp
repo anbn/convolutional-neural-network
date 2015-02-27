@@ -147,7 +147,7 @@ class subsampling_layer : public layer {
 public:
 
     subsampling_layer(int in_width, int out_width, size_t feature_maps)
-            : layer(feature_maps*in_width*in_width, feature_maps*out_width*out_width, feature_maps * in_width * in_width),
+            : layer(feature_maps*in_width*in_width, feature_maps*out_width*out_width, feature_maps*out_width*out_width),
             feature_maps_(feature_maps),
             in_width_(in_width), out_width_(out_width) {
 
@@ -167,20 +167,18 @@ public:
             for (int ox=0; ox<out_width_; ox++) {
                 for (int oy=0; oy<out_width_; oy++) {
                     
-                    /* Average Pooling */
-                       float_t sum =
-                        (in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )] +
-                         in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )] + 
-                         in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)] + 
-                         in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)]); /* 
-                        weights_[(out_width_*out_width_)*fm + (out_width_*ox) + oy] + bias_[fm] */
+                    float_t sum =   in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )] +
+                                    in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )] + 
+                                    in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)] + 
+                                    in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)];
                    
+                    /* Average Pooling, if all weights == 0.25 for 2*2 block */
                     /* Max Pooling 
                        float_t sum = std::max(
                         std::max(in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )], in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )]), 
                         std::max(in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)], in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)]));
                     */
-                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( 0.25*sum +0* bias_[(fm*out_width_ + ox)*out_width_ + oy]);
+                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( weights_[(fm*out_width_ + ox)*out_width_ + oy]*sum +0* bias_[(fm*out_width_ + ox)*out_width_ + oy]);
                 }
             }
         }

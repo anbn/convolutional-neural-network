@@ -3,6 +3,8 @@
 Build/
 data/
 
+*.md.html
+
 *.png
 *.jpg
 

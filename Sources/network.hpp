@@ -26,6 +26,8 @@ public:
         randomize(std::begin(bias_), std::end(bias_), -1.0, 1.0);
     }
 
+protected:
+    
     layer(size_t in_dim, size_t out_dim, size_t bias_dim, size_t weights_dim) : in_dim_(in_dim), out_dim_(out_dim) {
         //std::cout<<"DEBUG: layer("<<in_dim<<","<<out_dim<<","<<weights_dim<<")\n";
         weights_.resize(weights_dim);
@@ -35,8 +37,7 @@ public:
         resetWeights();
     }
 
-protected:
-
+    
     size_t in_dim_;
     size_t out_dim_;
 
@@ -127,28 +128,35 @@ public:
         assert(next_layer.in_dim()==next_layer.out_dim()*4); /* true for any 2*2 subsampling_layer */
 
         for (int fm=0; fm<out_feature_maps_; fm++) {
-            
-            float_t sum = 0.0;
+
+            float_t delta_sum = 0.0;
             for (int ox=0; ox<out_width_; ox++) {
                 for (int oy=0; oy<out_width_; oy++) {
-                    int oindex = (fm*out_width_+ ox)*out_width_ + oy;
-                    //delta_[oindex] = A_.df(output_[oindex]) * 
-                    //    next_layer.delta()[(in_width*in_width)*fm + (2*in_width*ox) + (2*oy)] * next_layer.weights()[o];
+                    
+                    int out_index = (fm*out_width_+ ox)*out_width_ + oy;
+                    delta_[out_index] = A_.df(output_[out_index]) * 
+                        next_layer.delta()[(in_width_*in_width_)*fm + (in_width_*ox/2) + (oy/2)] *
+                        next_layer.weights()[fm];
+                    delta_sum += delta_[out_index];
+
+                    float_t sum_filter = 0.0;
+                    for (int in_fm=0; in_fm<in_feature_maps_; in_fm++) {
+                        
+                        // if isConnected ...
+        
+                        for (int fx=0; fx<filter_width_; fx++) {
+                            for (int fy=0; fy<filter_width_; fy++) {
+                                sum_filter += delta_[out_index] * in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
+                            }
+                        }
+
+                        for (int fx=0; fx<filter_width_; fx++)
+                            for (int fy=0; fy<filter_width_; fy++)
+                                weights_[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy] += learning_rate * sum_filter;
+                    }
                 }
             }
-
-
-
-            for (int o=0; o<out_dim_; o++) {
-
-                sum += delta_[o];
-                
-                for (int i=0; i<in_dim_; i++) {
-                    //weights_[]
-                }
-                
-            }
-            //bias_[o] = learning_rate * sum;
+            bias_[fm] += learning_rate * delta_sum;
         }
 
     }
@@ -204,6 +212,10 @@ public:
                 }
             }
         }
+    }
+    
+    void backward(const vec_t& in, const layer& next_layer) {
+    
     }
     
 private:

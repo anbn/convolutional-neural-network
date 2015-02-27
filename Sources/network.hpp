@@ -126,7 +126,8 @@ public:
         assert(next_layer.in_dim()==out_dim_);
 
         for (int o=0; o<out_dim_; o++) {
-        
+            
+            //delta[o] = 
         }
     }
 
@@ -171,7 +172,7 @@ public:
                         (in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )] +
                          in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )] + 
                          in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)] + 
-                         in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)])*0.25; /* 
+                         in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)]); /* 
                         weights_[(out_width_*out_width_)*fm + (out_width_*ox) + oy] + bias_[fm] */
                    
                     /* Max Pooling 
@@ -179,7 +180,7 @@ public:
                         std::max(in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )], in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )]), 
                         std::max(in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)], in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)]));
                     */
-                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( sum );
+                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( 0.25*sum +0* bias_[(fm*out_width_ + ox)*out_width_ + oy]);
                 }
             }
         }
@@ -214,7 +215,7 @@ public:
             
             float_t sum=0.0;
             for (int i=0; i<in_dim_; i++) {
-                sum += in[i] * weights_[ o*in_dim_ + i];
+                sum += in[i] * weights_[o*in_dim_ + i];
             }
             output_[o] = A_.f(sum + bias_[o]);
         }

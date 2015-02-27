@@ -63,17 +63,9 @@ fullyconnected_test()
 
 }
 
-
-int
-main(int argc, const char *argv[])
+void
+cnn_test()
 {
-
-    // fullyconnected_test(); return 0;
-
-
-    vec_t input {0.0, 1.0, 1.0, 0.0};
-    vec_t soll {1,0,1,0};
-    vec_t output;
 
     convolutional_layer<sigmoid> C1(32,28,1,2);
     subsampling_layer<sigmoid> S2(28,14,2);
@@ -127,6 +119,17 @@ main(int argc, const char *argv[])
 
     cv::imshow("cnn", img);
     while(cv::waitKey(0)!=27);
+}
+
+
+int
+main(int argc, const char *argv[])
+{
+
+    // fullyconnected_test(); return 0;
+    
+    cnn_test();
+
     return 0;
 }
 

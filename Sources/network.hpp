@@ -128,81 +128,7 @@ public:
     ActivationFunction A_;
 };
 
-template <typename ActivationFunction = sigmoid>
-class subsampling_layer : public layer {
 
-public:
-
-    subsampling_layer(size_t in_width, size_t out_width, size_t feature_maps)
-            : layer(feature_maps*in_width*in_width, feature_maps*out_width*out_width, feature_maps, feature_maps),
-            feature_maps_(feature_maps),
-            in_width_(in_width), out_width_(out_width) {
-
-        assert(in_width == out_width*2);
-        
-        std::cout<<"DEBUG: subsampling_layer(" <<in_width_<<","<<out_width_<<","<<feature_maps_<<")\n";
-    }
-
-    void forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
-        
-        assert(in_feature_maps == feature_maps_);
-        assert(in_width == out_width_*2);
-        assert(in.size() == feature_maps_ * in_width_ * in_width_);
-
-        for (int fm=0; fm<feature_maps_; fm++) {
-            
-            for (int ox=0; ox<out_width_; ox++) {
-                for (int oy=0; oy<out_width_; oy++) {
-
-                    float_t sum =   in[(fm*in_width + (2*ox  ))*in_width + (2*oy  )] +
-                                    in[(fm*in_width + (2*ox+1))*in_width + (2*oy  )] + 
-                                    in[(fm*in_width + (2*ox  ))*in_width + (2*oy+1)] + 
-                                    in[(fm*in_width + (2*ox+1))*in_width + (2*oy+1)];
-                   
-                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( weights_[fm]*sum + bias_[fm] );
-                }
-            }
-        }
-    }
-    
-    void backward(const vec_t& in, const layer& next_layer) {
-
-        assert(in.size()==in_dim_);
-        assert(next_layer.in_dim()==out_dim_);
-
-
-        for (int fm=0; fm<feature_maps_; fm++) {
-/*
-            for (int ox=0; ox<out_width_; ox++) {
-                for (int oy=0; oy<out_width_; oy++) {
-
-                    int out_index = (fm*out_width_+ ox)*out_width_ + oy;
-
-                    float_t sum = 0.0;
-                    for (int fx=0; fx<filter_width_; fx++) {
-                        for (int fy=0; fy<filter_width_; fy++) {
-                            sum += next_layer.delta()[] *
-                                next_layer.weights()[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy];
-                        }
-                    }
-                    delta_[out_index] = A_.df(output_[out_index]) * sum;
-
-                }
-            }*/
-        }
-
-    }
-
-
-        
-    
-private:
-    
-    ActivationFunction A_;
-
-    size_t feature_maps_;   /* feature_maps_ == in_feature_maps_ == out_feature_maps_ */
-    size_t in_width_, out_width_;
-};
 
 
 /* A: ActivationFunction */
@@ -279,7 +205,7 @@ public:
         //assert(next_layer.in_dim()==next_layer.out_dim()*4); /* true for any 2*2 subsampling_layer */
 
         
-        // TODO  check an optimize
+        // TODO  check and optimize
         for (int fm=0; fm<out_feature_maps_; fm++) {
             
             float_t sum_delta = 0.0;
@@ -324,6 +250,84 @@ private:
     size_t filter_width_;
 };
 
+
+template <typename ActivationFunction = sigmoid>
+class subsampling_layer : public layer {
+
+public:
+
+    subsampling_layer(size_t in_width, size_t out_width, size_t feature_maps)
+            : layer(feature_maps*in_width*in_width, feature_maps*out_width*out_width, feature_maps, feature_maps),
+            feature_maps_(feature_maps),
+            in_width_(in_width), out_width_(out_width) {
+
+        assert(in_width == out_width*2);
+        
+        std::cout<<"DEBUG: subsampling_layer(" <<in_width_<<","<<out_width_<<","<<feature_maps_<<")\n";
+    }
+
+    void forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
+        
+        assert(in_feature_maps == feature_maps_);
+        assert(in_width == out_width_*2);
+        assert(in.size() == feature_maps_ * in_width_ * in_width_);
+
+        for (int fm=0; fm<feature_maps_; fm++) {
+            
+            for (int ox=0; ox<out_width_; ox++) {
+                for (int oy=0; oy<out_width_; oy++) {
+
+                    float_t sum =   in[(fm*in_width + (2*ox  ))*in_width + (2*oy  )] +
+                                    in[(fm*in_width + (2*ox+1))*in_width + (2*oy  )] + 
+                                    in[(fm*in_width + (2*ox  ))*in_width + (2*oy+1)] + 
+                                    in[(fm*in_width + (2*ox+1))*in_width + (2*oy+1)];
+                   
+                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( weights_[fm]*sum + bias_[fm] );
+                    //output_[(fm*out_width_ + ox)*out_width_ + oy] = sum*0.25; /* test subsampling */
+                }
+            }
+        }
+    }
+    
+    void backward(const vec_t& in, const convolutional_layer<ActivationFunction>& next_layer) {
+
+        assert(in.size()==in_dim_);
+        assert(next_layer.in_dim()==out_dim_);
+
+#if 0
+        for (int fm=0; fm<feature_maps_; fm++) {
+
+            for (int ox=0; ox<out_width_; ox++) {
+                for (int oy=0; oy<out_width_; oy++) {
+
+                    int out_index = (fm*out_width_+ ox)*out_width_ + oy;
+
+                    float_t sum = 0.0;
+                    for (int fx=0; fx<filter_width_; fx++) {
+                        for (int fy=0; fy<filter_width_; fy++) {
+                            sum += next_layer.delta()[(fm*out_width_ + ox)*out_width_ + oy] *
+                                next_layer.weights()[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy];
+                        }
+                    }
+                    delta_[out_index] = A_.df(output_[out_index]) * sum;
+
+                }
+            }
+        }
+#endif
+
+    }
+
+
+        
+    
+private:
+    
+    ActivationFunction A_;
+
+    size_t feature_maps_;   /* feature_maps_ == in_feature_maps_ == out_feature_maps_ */
+    size_t in_width_, out_width_;
+};
 } /* namespace my_nn */
 
 #endif /* NETWORK_HPP */

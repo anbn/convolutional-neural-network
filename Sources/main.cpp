@@ -25,9 +25,8 @@ void
 fullyconnected_test()
 {
     fullyconnected_layer<sigmoid> L1(4,8);
-    fullyconnected_layer<sigmoid> L2(8,9);
-    fullyconnected_layer<sigmoid> L3(9,6);
-    fullyconnected_layer<sigmoid> L4(6,4);
+    fullyconnected_layer<sigmoid> L2(8,6);
+    fullyconnected_layer<sigmoid> L3(6,4);
 
     vec_t input {0.0, 1.0, 1.0, 0.0};
     vec_t soll {1,0,1,0};
@@ -43,12 +42,11 @@ fullyconnected_test()
 
         L1.forward(4, input);
         L2.forward(8, L1.output());
-        L3.forward(9, L2.output());
-        L4.forward(6, L3.output());
+        L3.forward(6, L2.output());
 
         float error = 0.0;
         for (int i=0; i<soll.size(); i++) {
-            error += (soll[i]-L4.output()[i])*(soll[i]-L4.output()[i]);
+            error += (soll[i]-L3.output()[i])*(soll[i]-L3.output()[i]);
         }
         
         if(error<0.01) exit(0);
@@ -56,12 +54,11 @@ fullyconnected_test()
         if(s>200000) {
             print_vec("INPUT: ", input);
             print_vec("SOLL:  ", soll);
-            print_vec("IST:   ", L4.output());
+            print_vec("IST:   ", L3.output());
         }
         std::cout<< s << "   error: "<<error<<"\n";
 
-        L4.backward(L3,soll);
-        L3.backward(L2.output(), L4);
+        L3.backward(L2,soll);
         L2.backward(L1.output(), L3);
         L1.backward(input, L2);
     }
@@ -93,8 +90,8 @@ cnn_training_test()
     test[32*6+14] = 1.0;
     Image<my_nn::float_t> img_in(32,32,std::begin(test),std::end(test));
 
-    vec_t soll {1,1};
-    for(int s=0; s<10000; s++) {
+    vec_t soll {0,1};
+    for(int s=0; s<1000; s++) {
 
         C1.forward(1 /*in_fm*/, 32 /*in_width*/, test);
         S2.forward(2 /*in_fm*/, 28 /*in_width*/, C1.output());
@@ -118,26 +115,21 @@ cnn_training_test()
     Image<my_nn::float_t> img_c5( 1,  1*5, std::begin(C5.output()), std::end(C5.output()));
     Image<my_nn::float_t> img_o6( 1,    2, std::begin(O6.output()), std::end(O6.output()));
     
-    img_in.toIntensity( 0,1).exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
-    img_c1.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect( 50,0,img_c1.width(), img_c1.height())));
-    img_s2.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(100,0,img_s2.width(), img_s2.height())));
-    img_c3.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(150,0,img_c3.width(), img_c3.height())));
-    img_s4.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(200,0,img_s4.width(), img_s4.height())));
-    img_c5.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(250,0,img_c5.width(), img_c5.height())));
-    img_o6.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(300,0,img_o6.width(), img_o6.height())));
+    img_in.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
+    img_c1.toIntensity(0,1).exportMat().copyTo(img(cv::Rect( 50,0,img_c1.width(), img_c1.height())));
+    img_s2.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(100,0,img_s2.width(), img_s2.height())));
+    img_c3.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(150,0,img_c3.width(), img_c3.height())));
+    img_s4.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(200,0,img_s4.width(), img_s4.height())));
+    img_c5.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(250,0,img_c5.width(), img_c5.height())));
+    img_o6.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(300,0,img_o6.width(), img_o6.height())));
 
     cv::imshow("cnn", img);
     while(cv::waitKey(0)!=27);
-
-
-
-    //print_vec("TEST: ", C1.output());
-
-
 }
 
+
 void
-cnn_test()
+cnn_test_forward()
 {
 
     convolutional_layer<sigmoid> C1(32,28,1,2);
@@ -173,8 +165,6 @@ cnn_test()
 
     cv::Mat img(cv::Size(400,100), CV_8UC1, 100);
 
-    //print_vec("TEST: ", C1.output());
-
     Image<my_nn::float_t> img_c1(28, 28*2, std::begin(C1.output()), std::end(C1.output()));
     Image<my_nn::float_t> img_s2(14, 14*2, std::begin(S2.output()), std::end(S2.output()));
     Image<my_nn::float_t> img_c3(12, 12*5, std::begin(C3.output()), std::end(C3.output()));
@@ -182,13 +172,13 @@ cnn_test()
     Image<my_nn::float_t> img_c5( 1,  1*5, std::begin(C5.output()), std::end(C5.output()));
     Image<my_nn::float_t> img_o6( 1,    2, std::begin(O6.output()), std::end(O6.output()));
     
-    img_in.toIntensity( 0,1).exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
-    img_c1.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect( 50,0,img_c1.width(), img_c1.height())));
-    img_s2.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(100,0,img_s2.width(), img_s2.height())));
-    img_c3.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(150,0,img_c3.width(), img_c3.height())));
-    img_s4.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(200,0,img_s4.width(), img_s4.height())));
-    img_c5.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(250,0,img_c5.width(), img_c5.height())));
-    img_o6.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(300,0,img_o6.width(), img_o6.height())));
+    img_in.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
+    img_c1.toIntensity(0,1).exportMat().copyTo(img(cv::Rect( 50,0,img_c1.width(), img_c1.height())));
+    img_s2.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(100,0,img_s2.width(), img_s2.height())));
+    img_c3.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(150,0,img_c3.width(), img_c3.height())));
+    img_s4.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(200,0,img_s4.width(), img_s4.height())));
+    img_c5.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(250,0,img_c5.width(), img_c5.height())));
+    img_o6.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(300,0,img_o6.width(), img_o6.height())));
 
     cv::imshow("cnn", img);
     while(cv::waitKey(0)!=27);
@@ -199,12 +189,17 @@ int
 main(int argc, const char *argv[])
 {
 
+#if 1
     fullyconnected_test();
-    
-    //cnn_test();
-    
-    //cnn_training_test();
+#endif
 
+#if 0
+    cnn_test_forward();
+#endif
+#if 1
+    //cnn_training_test();
+#endif
+    
     return 0;
 }
 

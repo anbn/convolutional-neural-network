@@ -165,32 +165,32 @@ public:
         }
     }
     
-    void backward(const vec_t& in, const layer& next_layer, bool is_last_subsampling_layer) {
+    void backward(const vec_t& in, const layer& next_layer) {
 
         assert(in.size()==in_dim_);
         assert(next_layer.in_dim()==out_dim_);
 
 
         for (int fm=0; fm<feature_maps_; fm++) {
+/*
+            for (int ox=0; ox<out_width_; ox++) {
+                for (int oy=0; oy<out_width_; oy++) {
 
-            if (is_last_subsampling_layer) { /* get delta from fullyconnected_layer with "Vanilla"-Backpropagation */
+                    int out_index = (fm*out_width_+ ox)*out_width_ + oy;
 
-                for (int o=0; o<out_dim_; o++) {
-                    float_t sum = 0;
-                    for (int k=0; k<next_layer.out_dim(); k++)
-                        sum += next_layer.delta()[k] * next_layer.weights()[ o*next_layer.out_dim()+ k];
-
-                    delta_[o] = A_.df(output_[o]) * sum;
-                }
-
-            } else { /* get delta from convolutional_layer */
-                for (int ox=0; ox<out_width_; ox++) {
-                    for (int oy=0; oy<out_width_; oy++) {
-                        delta_[]
+                    float_t sum = 0.0;
+                    for (int fx=0; fx<filter_width_; fx++) {
+                        for (int fy=0; fy<filter_width_; fy++) {
+                            sum += next_layer.delta()[] *
+                                next_layer.weights()[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy];
+                        }
                     }
+                    delta_[out_index] = A_.df(output_[out_index]) * sum;
+
                 }
-            }        
+            }*/
         }
+
     }
 
 
@@ -272,11 +272,11 @@ public:
         }
     }
 
-    void backward(const vec_t& in, const subsampling_layer<ActivationFunction>& next_layer) {
+    void backward(const vec_t& in, const layer& next_layer) {
 
         assert(in.size()==in_feature_maps_ * in_width_ * in_width_);
         assert(next_layer.in_dim()==out_dim_);
-        assert(next_layer.in_dim()==next_layer.out_dim()*4); /* true for any 2*2 subsampling_layer */
+        //assert(next_layer.in_dim()==next_layer.out_dim()*4); /* true for any 2*2 subsampling_layer */
 
         
         // TODO  check an optimize

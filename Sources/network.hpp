@@ -31,7 +31,7 @@ protected:
     layer(size_t in_dim, size_t out_dim, size_t bias_dim, size_t weights_dim) : in_dim_(in_dim), out_dim_(out_dim) {
         //std::cout<<"DEBUG: layer("<<in_dim<<","<<out_dim<<","<<weights_dim<<")\n";
         weights_.resize(weights_dim);
-        output_.resize(out_dim);
+        output_.resize(out_dim_);
         bias_.resize(bias_dim);
         delta_.resize(out_dim_);
         resetWeights();
@@ -52,212 +52,6 @@ protected:
 
 
 //------------------------------------------------------------------------------
-
-
-/* A: ActivationFunction */
-template <typename ActivationFunction = sigmoid>
-class convolutional_layer : public layer {
-
-    class connection_table {
-
-    public:
-        connection_table() : rows_(0), cols_(0) {};
-        connection_table(const bool *ar, size_t rows, size_t cols) : connected_(rows * cols), rows_(rows), cols_(cols) {
-            std::copy(ar, ar + rows * cols, connected_.begin());
-        };
-
-        bool is_connected(int x, int y) {
-            return is_empty() ? true : connected_[y * cols_ + x];
-        }
-
-        bool is_empty() {
-            return rows_==0 && cols_==0;
-        }    
-
-    private:
-        std::vector<bool> connected_;
-        size_t rows_;
-        size_t cols_;
-    };
-
-    
-public:
-
-    convolutional_layer(size_t in_width, size_t out_width, size_t in_feature_maps, size_t out_feature_maps)
-            : layer(in_feature_maps*in_width*in_width, out_feature_maps*out_width*out_width, out_feature_maps, in_feature_maps*out_feature_maps*(in_width-out_width+1)*(in_width-out_width+1)),
-            in_feature_maps_(in_feature_maps),out_feature_maps_(out_feature_maps),
-            in_width_(in_width), out_width_(out_width),
-            filter_width_(in_width-out_width+1) {
-        std::cout<<"DEBUG: convolutional_layer(" <<in_width<<","<<out_width<<","<<in_feature_maps<<","<<out_feature_maps_<<")\n";
-    }
-
-    void forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
-        
-        assert(in_width == in_width_);
-        assert(in_feature_maps == in_feature_maps_);
-        assert(in.size() == in_feature_maps_ * in_width_ * in_width_);
-
-        for (int fm=0; fm<out_feature_maps_; fm++) {
-
-            for (int ox=0; ox<out_width_; ox++) {
-                for (int oy=0; oy<out_width_; oy++) {
-
-                    float_t sum = 0.0;
-                    for (int in_fm=0; in_fm<in_feature_maps_; in_fm++) {
-
-                        //if (!connection_.is_connected(in_fm, fm))
-                        //    continue;
-                       
-                        for (int fx=0; fx<filter_width_; fx++) {
-                            for (int fy=0; fy<filter_width_; fy++) {
-                                sum += weights_[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy] * 
-                                          in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
-                            }
-                        }
-                    }
-                    output_[(fm*out_width_+ ox)*out_width_ + oy] = A_.f(sum + bias_[fm]);
-                }
-            }
-        }
-    }
-
-    void backward(const vec_t& in, const layer& next_layer) {
-
-        assert(in.size()==in_feature_maps_ * in_width_ * in_width_);
-        assert(next_layer.in_dim()==out_dim_);
-        assert(next_layer.in_dim()==next_layer.out_dim()*4); /* true for any 2*2 subsampling_layer */
-
-        
-        // TODO  check an optimize
-        for (int fm=0; fm<out_feature_maps_; fm++) {
-            
-            float_t sum_delta = 0.0;
-            for (int ox=0; ox<out_width_; ox++) {
-                for (int oy=0; oy<out_width_; oy++) {
-                    int out_index = (fm*out_width_+ ox)*out_width_ + oy;
-                    delta_[out_index] = A_.df(output_[out_index]) * 
-                        next_layer.delta()[(in_width_*in_width_)*fm + (in_width_*ox/2) + (oy/2)] *
-                        next_layer.weights()[fm];
-                    sum_delta += delta_[out_index];
-                }
-            }
-            bias_[fm] += learning_rate * sum_delta;
-            
-            for (int in_fm=0; in_fm<in_feature_maps_; in_fm++) {
-
-                // if isConnected ...
-
-                for (int fx=0; fx<filter_width_; fx++) {
-                    for (int fy=0; fy<filter_width_; fy++) {
-
-                        float_t sum = 0.0;
-                        for (int ox=0; ox<out_width_; ox++) {
-                            for (int oy=0; oy<out_width_; oy++) {
-                                sum += delta_[(fm*out_width_+ ox)*out_width_ + oy] * in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
-                            }
-                        }
-                        weights_[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy] += learning_rate * sum;
-                    }
-                }
-            }
-        }
-
-# if 0
-                for (int fm=0; fm<out_feature_maps_; fm++) {
-
-                    float_t delta_sum = 0.0;
-                    for (int ox=0; ox<out_width_; ox++) {
-                        for (int oy=0; oy<out_width_; oy++) {
-
-                            for (int fx=0; fx<filter_width_; fx++) {
-                                for (int fy=0; fy<filter_width_; fy++) {
-
-                                    float_t sum_filter = 0.0;
-                                    for (int in_fm=0; in_fm<in_feature_maps_; in_fm++) {
-
-                                        // if isConnected ...
-
-                                        sum_filter += delta_[(fm*out_width_+ ox)*out_width_ + oy] * in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
-                                    }
-
-                                    for (int in_fm=0; in_fm<in_feature_maps_; in_fm++) {
-                                        weights_[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy] += learning_rate * sum_filter;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    bias_[fm] += learning_rate * delta_sum;
-                }
-# endif
-
-    }
-
-private:
-    
-    ActivationFunction A_;
-
-    connection_table connection_;
-    size_t in_feature_maps_, out_feature_maps_;
-    size_t in_width_, out_width_;
-    size_t filter_width_;
-};
-
-template <typename ActivationFunction = sigmoid>
-class subsampling_layer : public layer {
-
-public:
-
-    subsampling_layer(size_t in_width, size_t out_width, size_t feature_maps)
-            : layer(feature_maps*in_width*in_width, feature_maps*out_width*out_width, feature_maps, feature_maps),
-            feature_maps_(feature_maps),
-            in_width_(in_width), out_width_(out_width) {
-
-        assert(in_width == out_width*2);
-        
-        std::cout<<"DEBUG: subsampling_layer(" <<in_width_<<","<<out_width_<<","<<feature_maps_<<")\n";
-    }
-
-    void forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
-        
-        assert(in_feature_maps == feature_maps_);
-        assert(in_width == out_width_*2);
-        assert(in.size() == feature_maps_ * in_width_ * in_width_);
-
-        for (int fm=0; fm<feature_maps_; fm++) {
-            
-            for (int ox=0; ox<out_width_; ox++) {
-                for (int oy=0; oy<out_width_; oy++) {
-
-                    float_t sum =   in[(fm*in_width + (2*ox  ))*in_width + (2*oy  )] +
-                                    in[(fm*in_width + (2*ox+1))*in_width + (2*oy  )] + 
-                                    in[(fm*in_width + (2*ox  ))*in_width + (2*oy+1)] + 
-                                    in[(fm*in_width + (2*ox+1))*in_width + (2*oy+1)];
-                   
-                    /* Average Pooling, if all weights == 0.25 for 2*2 block */
-                    /* Max Pooling 
-                       float_t sum = std::max(
-                        std::max(in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy  )], in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy  )]), 
-                        std::max(in[(in_width*in_width)*fm + (2*in_width*ox  ) + (2*oy+1)], in[(in_width*in_width)*fm + (2*in_width*ox+1) + (2*oy+1)]));
-                    */
-                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( weights_[fm]*sum + bias_[fm] );
-                }
-            }
-        }
-    }
-    
-    void backward(const vec_t& in, const layer& next_layer) {
-    
-    }
-    
-private:
-    
-    ActivationFunction A_;
-
-    size_t feature_maps_;   /* feature_maps_ == in_feature_maps_ == out_feature_maps_ */
-    size_t in_width_, out_width_;
-};
-
 
 template <typename ActivationFunction = sigmoid>
 class fullyconnected_layer : public layer {
@@ -332,6 +126,202 @@ public:
     }*/
 
     ActivationFunction A_;
+};
+
+template <typename ActivationFunction = sigmoid>
+class subsampling_layer : public layer {
+
+public:
+
+    subsampling_layer(size_t in_width, size_t out_width, size_t feature_maps)
+            : layer(feature_maps*in_width*in_width, feature_maps*out_width*out_width, feature_maps, feature_maps),
+            feature_maps_(feature_maps),
+            in_width_(in_width), out_width_(out_width) {
+
+        assert(in_width == out_width*2);
+        
+        std::cout<<"DEBUG: subsampling_layer(" <<in_width_<<","<<out_width_<<","<<feature_maps_<<")\n";
+    }
+
+    void forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
+        
+        assert(in_feature_maps == feature_maps_);
+        assert(in_width == out_width_*2);
+        assert(in.size() == feature_maps_ * in_width_ * in_width_);
+
+        for (int fm=0; fm<feature_maps_; fm++) {
+            
+            for (int ox=0; ox<out_width_; ox++) {
+                for (int oy=0; oy<out_width_; oy++) {
+
+                    float_t sum =   in[(fm*in_width + (2*ox  ))*in_width + (2*oy  )] +
+                                    in[(fm*in_width + (2*ox+1))*in_width + (2*oy  )] + 
+                                    in[(fm*in_width + (2*ox  ))*in_width + (2*oy+1)] + 
+                                    in[(fm*in_width + (2*ox+1))*in_width + (2*oy+1)];
+                   
+                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( weights_[fm]*sum + bias_[fm] );
+                }
+            }
+        }
+    }
+    
+    void backward(const vec_t& in, const layer& next_layer, bool is_last_subsampling_layer) {
+
+        assert(in.size()==in_dim_);
+        assert(next_layer.in_dim()==out_dim_);
+
+
+        for (int fm=0; fm<feature_maps_; fm++) {
+
+            if (is_last_subsampling_layer) { /* get delta from fullyconnected_layer with "Vanilla"-Backpropagation */
+
+                for (int o=0; o<out_dim_; o++) {
+                    float_t sum = 0;
+                    for (int k=0; k<next_layer.out_dim(); k++)
+                        sum += next_layer.delta()[k] * next_layer.weights()[ o*next_layer.out_dim()+ k];
+
+                    delta_[o] = A_.df(output_[o]) * sum;
+                }
+
+            } else { /* get delta from convolutional_layer */
+                for (int ox=0; ox<out_width_; ox++) {
+                    for (int oy=0; oy<out_width_; oy++) {
+                        delta_[]
+                    }
+                }
+            }        
+        }
+    }
+
+
+        
+    
+private:
+    
+    ActivationFunction A_;
+
+    size_t feature_maps_;   /* feature_maps_ == in_feature_maps_ == out_feature_maps_ */
+    size_t in_width_, out_width_;
+};
+
+
+/* A: ActivationFunction */
+template <typename ActivationFunction = sigmoid>
+class convolutional_layer : public layer {
+
+    class connection_table {
+
+    public:
+        connection_table() : rows_(0), cols_(0) {};
+        connection_table(const bool *ar, size_t rows, size_t cols) : connected_(rows * cols), rows_(rows), cols_(cols) {
+            std::copy(ar, ar + rows * cols, connected_.begin());
+        };
+
+        bool is_connected(int x, int y) {
+            return is_empty() ? true : connected_[y * cols_ + x];
+        }
+
+        bool is_empty() {
+            return rows_==0 && cols_==0;
+        }    
+
+    private:
+        std::vector<bool> connected_;
+        size_t rows_;
+        size_t cols_;
+    };
+
+    
+public:
+
+    convolutional_layer(size_t in_width, size_t out_width, size_t in_feature_maps, size_t out_feature_maps)
+            : layer(in_feature_maps*in_width*in_width, out_feature_maps*out_width*out_width, out_feature_maps, in_feature_maps*out_feature_maps*(in_width-out_width+1)*(in_width-out_width+1)),
+            in_feature_maps_(in_feature_maps),out_feature_maps_(out_feature_maps),
+            in_width_(in_width), out_width_(out_width),
+            filter_width_(in_width-out_width+1) {
+        std::cout<<"DEBUG: convolutional_layer(" <<in_width<<","<<out_width<<","<<in_feature_maps<<","<<out_feature_maps_<<")\n";
+    }
+
+    void forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
+        
+        assert(in_width == in_width_);
+        assert(in_feature_maps == in_feature_maps_);
+        assert(in.size() == in_feature_maps_ * in_width_ * in_width_);
+
+        for (int fm=0; fm<out_feature_maps_; fm++) {
+
+            for (int ox=0; ox<out_width_; ox++) {
+                for (int oy=0; oy<out_width_; oy++) {
+
+                    float_t sum = 0.0;
+                    for (int in_fm=0; in_fm<in_feature_maps_; in_fm++) {
+
+                        //if (!connection_.is_connected(in_fm, fm))
+                        //    continue;
+                       
+                        for (int fx=0; fx<filter_width_; fx++) {
+                            for (int fy=0; fy<filter_width_; fy++) {
+                                sum += weights_[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy] * 
+                                          in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
+                            }
+                        }
+                    }
+                    output_[(fm*out_width_+ ox)*out_width_ + oy] = A_.f(sum + bias_[fm]);
+                }
+            }
+        }
+    }
+
+    void backward(const vec_t& in, const subsampling_layer<ActivationFunction>& next_layer) {
+
+        assert(in.size()==in_feature_maps_ * in_width_ * in_width_);
+        assert(next_layer.in_dim()==out_dim_);
+        assert(next_layer.in_dim()==next_layer.out_dim()*4); /* true for any 2*2 subsampling_layer */
+
+        
+        // TODO  check an optimize
+        for (int fm=0; fm<out_feature_maps_; fm++) {
+            
+            float_t sum_delta = 0.0;
+            for (int ox=0; ox<out_width_; ox++) {
+                for (int oy=0; oy<out_width_; oy++) {
+                    int out_index = (fm*out_width_+ ox)*out_width_ + oy;
+                    delta_[out_index] = A_.df(output_[out_index]) * 
+                        next_layer.delta()[(in_width_*in_width_)*fm + (in_width_*ox/2) + (oy/2)] *
+                        next_layer.weights()[fm];
+                    sum_delta += delta_[out_index];
+                }
+            }
+            bias_[fm] += learning_rate * sum_delta;
+            
+            for (int in_fm=0; in_fm<in_feature_maps_; in_fm++) {
+
+                // if isConnected ...
+
+                for (int fx=0; fx<filter_width_; fx++) {
+                    for (int fy=0; fy<filter_width_; fy++) {
+
+                        float_t sum = 0.0;
+                        for (int ox=0; ox<out_width_; ox++) {
+                            for (int oy=0; oy<out_width_; oy++) {
+                                sum += delta_[(fm*out_width_+ ox)*out_width_ + oy] * in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
+                            }
+                        }
+                        weights_[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy] += learning_rate * sum;
+                    }
+                }
+            }
+        }
+    }
+
+private:
+    
+    ActivationFunction A_;
+
+    connection_table connection_;
+    size_t in_feature_maps_, out_feature_maps_;
+    size_t in_width_, out_width_;
+    size_t filter_width_;
 };
 
 } /* namespace my_nn */

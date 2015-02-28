@@ -127,37 +127,69 @@ public:
         assert(next_layer.in_dim()==out_dim_);
         assert(next_layer.in_dim()==next_layer.out_dim()*4); /* true for any 2*2 subsampling_layer */
 
+        
+        // TODO  check an optimize
         for (int fm=0; fm<out_feature_maps_; fm++) {
-
-            float_t delta_sum = 0.0;
+            
+            float_t sum_delta = 0.0;
             for (int ox=0; ox<out_width_; ox++) {
                 for (int oy=0; oy<out_width_; oy++) {
-                    
                     int out_index = (fm*out_width_+ ox)*out_width_ + oy;
                     delta_[out_index] = A_.df(output_[out_index]) * 
                         next_layer.delta()[(in_width_*in_width_)*fm + (in_width_*ox/2) + (oy/2)] *
                         next_layer.weights()[fm];
-                    delta_sum += delta_[out_index];
+                    sum_delta += delta_[out_index];
+                }
+            }
+            bias_[fm] += learning_rate * sum_delta;
+            
+            for (int in_fm=0; in_fm<in_feature_maps_; in_fm++) {
 
-                    float_t sum_filter = 0.0;
-                    for (int in_fm=0; in_fm<in_feature_maps_; in_fm++) {
-                        
-                        // if isConnected ...
-        
-                        for (int fx=0; fx<filter_width_; fx++) {
-                            for (int fy=0; fy<filter_width_; fy++) {
-                                sum_filter += delta_[out_index] * in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
+                // if isConnected ...
+
+                for (int fx=0; fx<filter_width_; fx++) {
+                    for (int fy=0; fy<filter_width_; fy++) {
+
+                        float_t sum = 0.0;
+                        for (int ox=0; ox<out_width_; ox++) {
+                            for (int oy=0; oy<out_width_; oy++) {
+                                sum += delta_[(fm*out_width_+ ox)*out_width_ + oy] * in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
                             }
                         }
-
-                        for (int fx=0; fx<filter_width_; fx++)
-                            for (int fy=0; fy<filter_width_; fy++)
-                                weights_[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy] += learning_rate * sum_filter;
+                        weights_[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy] += learning_rate * sum;
                     }
                 }
             }
-            bias_[fm] += learning_rate * delta_sum;
         }
+
+# if 0
+                for (int fm=0; fm<out_feature_maps_; fm++) {
+
+                    float_t delta_sum = 0.0;
+                    for (int ox=0; ox<out_width_; ox++) {
+                        for (int oy=0; oy<out_width_; oy++) {
+
+                            for (int fx=0; fx<filter_width_; fx++) {
+                                for (int fy=0; fy<filter_width_; fy++) {
+
+                                    float_t sum_filter = 0.0;
+                                    for (int in_fm=0; in_fm<in_feature_maps_; in_fm++) {
+
+                                        // if isConnected ...
+
+                                        sum_filter += delta_[(fm*out_width_+ ox)*out_width_ + oy] * in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
+                                    }
+
+                                    for (int in_fm=0; in_fm<in_feature_maps_; in_fm++) {
+                                        weights_[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy] += learning_rate * sum_filter;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    bias_[fm] += learning_rate * delta_sum;
+                }
+# endif
 
     }
 
@@ -177,7 +209,7 @@ class subsampling_layer : public layer {
 public:
 
     subsampling_layer(size_t in_width, size_t out_width, size_t feature_maps)
-            : layer(feature_maps*in_width*in_width, feature_maps*out_width*out_width, feature_maps, feature_maps*out_width*out_width),
+            : layer(feature_maps*in_width*in_width, feature_maps*out_width*out_width, feature_maps, feature_maps),
             feature_maps_(feature_maps),
             in_width_(in_width), out_width_(out_width) {
 

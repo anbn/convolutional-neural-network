@@ -15,6 +15,8 @@ typedef unsigned char intensity_t;
 template <typename T = intensity_t>
 class Image {
     
+    friend Image;
+    
 public:
 
     Image() : width_(0), height_(0) {}
@@ -29,7 +31,8 @@ public:
 
     size_t width() const { return width_; }
     size_t height() const { return height_; }
-    std::vector<T>& data() { return data_; }
+    const std::vector<T>& data() const { return data_; }
+
 
     void resize(size_t width, size_t height) {
         data_.resize(width * height);
@@ -90,15 +93,16 @@ public:
 
     Image<intensity_t> toIntensity(T min, T max) {
         
-        Image<intensity_t> result(width_, height_);
+        std::vector<intensity_t> data(width_*height_,0);
+
 
         for (int w=0; w<width_; w++) {
             for (int h=0; h<height_; h++) {
-                result.data()[h*width_+w] = static_cast<intensity_t>((data_[h * width_ + w]-min)/(max-min)*255.0);
+                data[h*width_+w] = static_cast<intensity_t>((data_[h * width_ + w]-min)/(max-min)*255.0);
             }
         }
 
-        return result;
+        return Image<intensity_t>(width_, height_, std::begin(data), std::end(data));
     }
 
     Image<intensity_t> toIntensity() {
@@ -138,6 +142,7 @@ private:
 };
 
 
+#if 0
 Image<intensity_t>
 readPgmP5(std::string filename)
 {
@@ -171,5 +176,6 @@ readPgmP5(std::string filename)
     infile.close();
     return result;
 }
+#endif
 
 #endif /* image.hpp */

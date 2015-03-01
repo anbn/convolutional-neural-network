@@ -69,52 +69,58 @@ fullyconnected_test()
 void
 cnn_training_test()
 {
-    convolutional_layer<sigmoid> C1(32,28,1,2);
-    subsampling_layer<sigmoid> S2(28,14,2);
-    convolutional_layer<sigmoid> C3(14,12,2,5);
-    subsampling_layer<sigmoid> S4(12,6,5);
-    convolutional_layer<sigmoid> C5(6,1,5,5);
-    fullyconnected_layer<sigmoid> O6(5,2);
-    
-    vec_t test(32*32);
-    for(int i=0; i<32; i++){
-        if(i>12) {
-            test[32*i+i-1] = 0.5;
-            test[32*i+i]   = 0.8;
-            test[32*i+i+1] = 1.0;
-        }
-        test[32*20+i] = 1.0;
-        test[32*i+20] = 1.0;
-    }
-    test[32*5+5] = 1.0;
-    test[32*6+14] = 1.0;
-    Image<my_nn::float_t> img_in(32,32,std::begin(test),std::end(test));
+    mnist_reader mnist;
+    mnist.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 1000);
 
-    vec_t soll {1,0};
+    convolutional_layer<sigmoid>  C1(28 /* in_width*/, 24 /* out_width*/, 1,2);
+    subsampling_layer<sigmoid>    S2(24 /* in_width*/, 12 /* out_width*/, 2);
+    convolutional_layer<sigmoid>  C3(12 /* in_width*/, 10 /* out_width*/, 2,5);
+    subsampling_layer<sigmoid>    S4(10 /* in_width*/,  5 /* out_width*/, 5);
+    convolutional_layer<sigmoid>  C5( 5 /* in_width*/,  1 /* out_width*/, 5,10);
+    fullyconnected_layer<sigmoid> O6(10 /* in_width*/, 10 /* out_width*/);
+    
+    //Image<my_nn::float_t> img_in(,32,std::begin(),std::end(test));
+
+    vec_t soll {0,0,0,0,0,0,0,0,0,0};
+    int last_label = 0;
     for(int s=0; s<1000; s++) {
 
-        C1.forward(1 /*in_fm*/, 32 /*in_width*/, test);
-        S2.forward(2 /*in_fm*/, 28 /*in_width*/, C1.output());
-        C3.forward(2 /*in_fm*/, 14 /*in_width*/, S2.output());
-        S4.forward(5 /*in_fm*/, 12 /*in_width*/, C3.output());
-        C5.forward(5 /*in_fm*/,  6 /*in_width*/, S4.output());
-        O6.forward(5 /*in_dim*/, C5.output());
+        C1.forward(1 /*in_fm*/, 28 /*in_width*/, mnist.image(s).data());
+        S2.forward(2 /*in_fm*/, 24 /*in_width*/, C1.output());
+        C3.forward(2 /*in_fm*/, 12 /*in_width*/, S2.output());
+        S4.forward(5 /*in_fm*/, 10 /*in_width*/, C3.output());
+        C5.forward(5 /*in_fm*/,  5 /*in_width*/, S4.output());
+        O6.forward(10 /*in_dim*/, C5.output());
+        
+        soll[last_label] = 0;
+        last_label = mnist.label(s);
+        soll[last_label] = 1;
 
-        O6.backward(C5, soll);
+        //std::cout<<"Size: "<<mnist.image(s).data().size();
+        //for (int i=0; i<mnist.image(s).data().size(); i++)
+        //    std::cout<<mnist.image(s).data()[i]<<" ";
+        //std::cout<<std::endl;
+
+        /*O6.backward(C5, soll);
         C5.backward(S4.output(), O6);
         S4.backward(C3.output(), C5);
         C3.backward(S2.output(), S4);
         S2.backward(C1.output(), C3);
-        C1.backward(test, S2);
-    } 
-    cv::Mat img(cv::Size(400,100), CV_8UC1, 100);
-    Image<my_nn::float_t> img_c1(28, 28*2, std::begin(C1.output()), std::end(C1.output()));
-    Image<my_nn::float_t> img_s2(14, 14*2, std::begin(S2.output()), std::end(S2.output()));
-    Image<my_nn::float_t> img_c3(12, 12*5, std::begin(C3.output()), std::end(C3.output()));
-    Image<my_nn::float_t> img_s4( 6,  6*5, std::begin(S4.output()), std::end(S4.output()));
-    Image<my_nn::float_t> img_c5( 1,  1*5, std::begin(C5.output()), std::end(C5.output()));
-    Image<my_nn::float_t> img_o6( 1,    2, std::begin(O6.output()), std::end(O6.output()));
+        C1.backward(mnist.image(s).data(), S2);*/
+
+    }
+    std::cout<<"\n";
+
+    Image<my_nn::float_t> img_in(28,   28, std::begin(mnist.image(999).data()), std::end(mnist.image(999).data()));
+    Image<my_nn::float_t> img_c1(24, 24*2, std::begin(C1.output()), std::end(C1.output()));
+    Image<my_nn::float_t> img_s2(12, 12*2, std::begin(S2.output()), std::end(S2.output()));
+    Image<my_nn::float_t> img_c3(10, 10*5, std::begin(C3.output()), std::end(C3.output()));
+    Image<my_nn::float_t> img_s4( 5,  5*5, std::begin(S4.output()), std::end(S4.output()));
+    Image<my_nn::float_t> img_c5( 5,  1*5, std::begin(C5.output()), std::end(C5.output()));
+    Image<my_nn::float_t> img_o6(10,   10, std::begin(O6.output()), std::end(O6.output()));
     
+    
+    cv::Mat img(cv::Size(400,100), CV_8UC1, 100);
     img_in.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
     img_c1.toIntensity(0,1).exportMat().copyTo(img(cv::Rect( 50,0,img_c1.width(), img_c1.height())));
     img_s2.toIntensity(0,1).exportMat().copyTo(img(cv::Rect(100,0,img_s2.width(), img_s2.height())));
@@ -210,11 +216,11 @@ main(int argc, const char *argv[])
     cnn_test_forward();
 #endif
 
-#if 0
+#if 1
     cnn_training_test();
 #endif
 
-#if 1
+#if 0
     mnist_reader_test();
 #endif
     

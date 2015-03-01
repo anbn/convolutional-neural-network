@@ -17,7 +17,7 @@ public:
     size_t image_width() const { return image_width_; }
     size_t image_height() const { return image_height_; }
 
-    const Image<intensity_t>& image(int n) { return images_[n]; }
+    const Image<float_t>& image(int n) { return images_[n]; }
     int   label(int n) { return labels_[n]; }
 
     mnist_reader() : num_examples_(0) {};
@@ -66,15 +66,16 @@ public:
         endswap(&rows);
         endswap(&columns);
 
-        unsigned char label;
-        std::vector<intensity_t> data(rows*columns);
+        unsigned char byte, label;
+        std::vector<float_t> data(rows*columns);
         for (size_t n = 0; n<num; ++n) {
             
             file_labels.read(reinterpret_cast<char*>(&label), sizeof(unsigned char));
             for (int i=0; i<rows*columns; i++) {
-                file_images.read(reinterpret_cast<char*>(&data[i]), sizeof(intensity_t));
+                file_images.read(reinterpret_cast<char*>(&byte), sizeof(unsigned char));
+                data[i] = byte /255.0;
             }
-            images_[n] = Image<intensity_t>(columns, rows, std::begin(data), std::end(data));
+            images_[n] = Image<float_t>(columns, rows, std::begin(data), std::end(data));
             labels_[n] = label;
             ++num_examples_;
         }
@@ -93,7 +94,7 @@ protected:
         
     size_t image_width_;
     size_t image_height_;
-    std::vector< Image<intensity_t> > images_;
+    std::vector< Image<float_t> > images_;
     std::vector<int> labels_;
 };
 

@@ -16,4 +16,11 @@ void randomize(Iter begin, Iter end, float_t min, float_t max) {
         *it = randomize(min, max);
 }
 
+template <typename T>
+void endswap(T *obj)
+{
+  unsigned char *memp = reinterpret_cast<unsigned char*>(obj);
+  std::reverse(memp, memp + sizeof(T));
+}
+
 #endif /* UTILS_HPP */

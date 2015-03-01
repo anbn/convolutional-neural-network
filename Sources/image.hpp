@@ -119,7 +119,7 @@ public:
         }
     }
     
-    cv::Mat exportMat() {
+    cv::Mat exportMat() const {
         cv::Mat img(cv::Size(this->width_, this->height_),CV_8UC1);
         for (int w=0; w<img.cols; w++) {
             for (int h=0; h<img.rows; h++) {

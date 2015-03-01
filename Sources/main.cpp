@@ -188,11 +188,15 @@ cnn_test_forward()
 void
 mnist_reader_test()
 {
-    mnist_reader mnist( "train-images-idx3-ubyte",
-                        "train-labels-idx1-ubyte" );
-    
+    mnist_reader mnist;
+    mnist.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 15);
 
+    for (int i=0; i<mnist.num_examples(); i++) {
+        cv::imshow("cnn"+std::to_string(mnist.label(i)), mnist.image(i).exportMat());
+    }
+    while(cv::waitKey(0)!=27);
 }
+
 
 int
 main(int argc, const char *argv[])

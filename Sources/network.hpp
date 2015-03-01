@@ -5,6 +5,8 @@
 #include "activation.hpp"
 #include "image.hpp"
 
+#include "mnist_reader.hpp"
+
 namespace my_nn {
 
 typedef double float_t;

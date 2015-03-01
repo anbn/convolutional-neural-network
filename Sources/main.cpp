@@ -185,6 +185,15 @@ cnn_test_forward()
 }
 
 
+void
+mnist_reader_test()
+{
+    mnist_reader mnist( "train-images-idx3-ubyte",
+                        "train-labels-idx1-ubyte" );
+    
+
+}
+
 int
 main(int argc, const char *argv[])
 {
@@ -196,8 +205,13 @@ main(int argc, const char *argv[])
 #if 0
     cnn_test_forward();
 #endif
-#if 1
+
+#if 0
     cnn_training_test();
+#endif
+
+#if 1
+    mnist_reader_test();
 #endif
     
     return 0;

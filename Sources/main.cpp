@@ -90,7 +90,7 @@ cnn_training_test()
     test[32*6+14] = 1.0;
     Image<my_nn::float_t> img_in(32,32,std::begin(test),std::end(test));
 
-    vec_t soll {0,1};
+    vec_t soll {1,0};
     for(int s=0; s<1000; s++) {
 
         C1.forward(1 /*in_fm*/, 32 /*in_width*/, test);
@@ -189,7 +189,7 @@ int
 main(int argc, const char *argv[])
 {
 
-#if 1
+#if 0
     fullyconnected_test();
 #endif
 
@@ -197,7 +197,7 @@ main(int argc, const char *argv[])
     cnn_test_forward();
 #endif
 #if 1
-    //cnn_training_test();
+    cnn_training_test();
 #endif
     
     return 0;

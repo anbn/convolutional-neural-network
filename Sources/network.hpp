@@ -168,6 +168,10 @@ public:
         std::cout<<"DEBUG: convolutional_layer(" <<in_width<<","<<out_width<<","<<in_feature_maps<<","<<out_feature_maps_<<")\n";
     }
 
+    size_t out_feature_maps() const { return out_feature_maps_; }
+    size_t in_feature_maps() const { return in_feature_maps_; }
+    size_t filter_width() const { return filter_width_; }
+
     void forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
         
         assert(in_width == in_width_);
@@ -269,6 +273,7 @@ public:
     void forward(size_t in_feature_maps, size_t in_width, const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
         
         assert(in_feature_maps == feature_maps_);
+        assert(in_width == in_width_);
         assert(in_width == out_width_*2);
         assert(in.size() == feature_maps_ * in_width_ * in_width_);
 
@@ -294,25 +299,32 @@ public:
         assert(in.size()==in_dim_);
         assert(next_layer.in_dim()==out_dim_);
 
-#if 0
+#if 1
         for (int fm=0; fm<feature_maps_; fm++) {
 
+            float_t sum = 0.0;
+            float_t sum_delta = 0.0;
             for (int ox=0; ox<out_width_; ox++) {
                 for (int oy=0; oy<out_width_; oy++) {
 
                     int out_index = (fm*out_width_+ ox)*out_width_ + oy;
-
+                    int filter_width = next_layer.filter_width();
                     float_t sum = 0.0;
-                    for (int fx=0; fx<filter_width_; fx++) {
-                        for (int fy=0; fy<filter_width_; fy++) {
+                    for (int fx=0; fx<filter_width; fx++) {
+                        for (int fy=0; fy<filter_width; fy++) {
                             sum += next_layer.delta()[(fm*out_width_ + ox)*out_width_ + oy] *
-                                next_layer.weights()[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy];
+                                next_layer.weights()[((fm*next_layer.out_feature_maps() + fm)*filter_width + fx)*filter_width + fy];
                         }
                     }
+                    sum +=  in[(fm*in_width_ + (2*ox  ))*in_width_ + (2*oy  )] +
+                            in[(fm*in_width_ + (2*ox+1))*in_width_ + (2*oy  )] + 
+                            in[(fm*in_width_ + (2*ox  ))*in_width_ + (2*oy+1)] + 
+                            in[(fm*in_width_ + (2*ox+1))*in_width_ + (2*oy+1)];
                     delta_[out_index] = A_.df(output_[out_index]) * sum;
-
                 }
             }
+            bias_[fm] += learning_rate*sum_delta;
+            weights_[fm] += learning_rate*sum;
         }
 #endif
 

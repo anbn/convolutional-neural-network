@@ -21,6 +21,12 @@ public:
     int   label(int n) { return labels_[n]; }
 
     mnist_reader() : num_examples_(0) {};
+
+//    void rescale(float_t min, float_t max) {
+//        for (auto& img : images_)
+//            img.rescale(min, max);
+//    
+//    }
     
     bool read(std::string filename_images, std::string filename_labels, size_t num) {
         std::cout<<"Reading mnist... ";
@@ -73,7 +79,7 @@ public:
             file_labels.read(reinterpret_cast<char*>(&label), sizeof(unsigned char));
             for (int i=0; i<rows*columns; i++) {
                 file_images.read(reinterpret_cast<char*>(&byte), sizeof(unsigned char));
-                data[i] = byte /255.0;
+                data[i] = (byte / 128.0)-1;
             }
             images_[n] = Image<float_t>(columns, rows, std::begin(data), std::end(data));
             labels_[n] = label;
@@ -83,12 +89,17 @@ public:
 
         file_images.close();
         file_labels.close();
+
+
         std::cout<<"done. ("<<num_examples_<<" images read)\n";
         return true;
     }
 
+    void corrupt(int n) 
+    {
+        images_[n].fill(0);
+    }
 protected:
-
 
     size_t num_examples_;
         

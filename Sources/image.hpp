@@ -15,8 +15,6 @@ typedef unsigned char intensity_t;
 template <typename T = intensity_t>
 class Image {
     
-    friend Image;
-    
 public:
 
     Image() : width_(0), height_(0) {}
@@ -70,7 +68,6 @@ public:
                 result.data()[h*width_+w]= sum;
             }
         }
-            
         return result;
     }
     
@@ -89,12 +86,10 @@ public:
         }
         return result;    
     }
-    
-
+   
     Image<intensity_t> toIntensity(T min, T max) {
         
         std::vector<intensity_t> data(width_*height_,0);
-
 
         for (int w=0; w<width_; w++) {
             for (int h=0; h<height_; h++) {
@@ -105,10 +100,24 @@ public:
         return Image<intensity_t>(width_, height_, std::begin(data), std::end(data));
     }
 
-    Image<intensity_t> toIntensity() {
+    /*Image<intensity_t> toIntensity() {
         auto pair_minmax = std::minmax_element(std::begin(this->data_), std::end(this->data_));
         return toIntensity(*pair_minmax.first, *pair_minmax.second);
-    }
+    }*/
+
+    /*void rescale(T newmin, T newmax) {
+        auto pair_minmax = std::minmax_element(std::begin(this->data_), std::end(this->data_));
+        std::cout<<"MINMAX: "<<*pair_minmax.first<<" and "<<*pair_minmax.second<<"\n";
+        std::cout<<"MINMAX: "<<newmin<<" and "<<newmax<<"\n";
+        //exit(0);
+        for (int w=0; w<width_; w++) {
+            for (int h=0; h<height_; h++) {
+                //std::cout<<data_[h*width_+w]<<" ";
+                data_[h*width_+w] = (((data_[h*width_+w]-*pair_minmax.first)/(*pair_minmax.second-*pair_minmax.first)) * (newmax-newmin)+newmin);
+                //std::cout<<data_[h*width_+w]<<" \n";
+            }
+        }
+    }*/
 
 
     void importMat(cv::Mat img) {

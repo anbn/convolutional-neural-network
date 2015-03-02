@@ -1,6 +1,6 @@
 CXX      = clang++
 LDFLAGS  = -lopencv_features2d -lopencv_core  -lopencv_highgui
-CXXFLAGS = -std=c++11 -stdlib=libc++ -Wall
+CXXFLAGS = -std=c++11 -stdlib=libc++ -Wall -Wno-everything
 
 OBJDIR   = Build
 SRCDIR   = Sources

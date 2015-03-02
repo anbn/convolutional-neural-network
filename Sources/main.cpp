@@ -49,8 +49,6 @@ fullyconnected_test()
             error += (soll[i]-L3.output()[i])*(soll[i]-L3.output()[i]);
         }
         
-        if(error<0.01) exit(0);
-
         if(s>200000) {
             print_vec("INPUT: ", input);
             print_vec("SOLL:  ", soll);
@@ -61,6 +59,8 @@ fullyconnected_test()
         L3.backward(L2,soll);
         L2.backward(L1.output(), L3);
         L1.backward(input, L2);
+
+        if(error<0.01) exit(0);
     }
 
 }
@@ -71,53 +71,58 @@ cnn_training_test()
 {
     mnist_reader mnist;
     mnist.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 1000);
+    const int steps = 10;
 
     convolutional_layer<sigmoid>  C1(28 /* in_width*/, 24 /* out_width*/, 1,2);
     subsampling_layer<sigmoid>    S2(24 /* in_width*/, 12 /* out_width*/, 2);
     convolutional_layer<sigmoid>  C3(12 /* in_width*/, 10 /* out_width*/, 2,5);
     subsampling_layer<sigmoid>    S4(10 /* in_width*/,  5 /* out_width*/, 5);
-    convolutional_layer<sigmoid>  C5( 5 /* in_width*/,  1 /* out_width*/, 5,10);
-    fullyconnected_layer<sigmoid> O6(10 /* in_width*/, 10 /* out_width*/);
+    convolutional_layer<sigmoid>  C5( 5 /* in_width*/,  1 /* out_width*/, 5,16);
+    fullyconnected_layer<sigmoid> O6(16 /* in_width*/, 10 /* out_width*/);
     
     //Image<my_nn::float_t> img_in(,32,std::begin(),std::end(test));
 
     vec_t soll {0,0,0,0,0,0,0,0,0,0};
     int last_label = 0;
-    for(int s=0; s<1000; s++) {
+    for(int s=0; s<steps; s++) {
 
         C1.forward(1 /*in_fm*/, 28 /*in_width*/, mnist.image(s).data());
         S2.forward(2 /*in_fm*/, 24 /*in_width*/, C1.output());
         C3.forward(2 /*in_fm*/, 12 /*in_width*/, S2.output());
         S4.forward(5 /*in_fm*/, 10 /*in_width*/, C3.output());
         C5.forward(5 /*in_fm*/,  5 /*in_width*/, S4.output());
-        O6.forward(10 /*in_dim*/, C5.output());
+        O6.forward(16 /*in_dim*/, C5.output());
         
         soll[last_label] = 0;
         last_label = mnist.label(s);
         soll[last_label] = 1;
 
-        //std::cout<<"Size: "<<mnist.image(s).data().size();
-        //for (int i=0; i<mnist.image(s).data().size(); i++)
-        //    std::cout<<mnist.image(s).data()[i]<<" ";
-        //std::cout<<std::endl;
+        my_nn::float_t error = 0.0;
+        std::cout<<"Step: "<<s<<"\n";
+        for (int o=0; o<soll.size(); o++) {
+            error += (soll[o]-C5.output()[o])*(soll[o]-C5.output()[o]);
+            std::cout<<"    "<<soll[o]<<" vs "<<C5.output()[o]<<"\n";
+        }
+        std::cout<<"    error "<<error<<"\n";
+        if (error!=error) break;
 
-        /*O6.backward(C5, soll);
+        O6.backward(C5, soll);
         C5.backward(S4.output(), O6);
         S4.backward(C3.output(), C5);
         C3.backward(S2.output(), S4);
         S2.backward(C1.output(), C3);
-        C1.backward(mnist.image(s).data(), S2);*/
+        C1.backward(mnist.image(s).data(), S2);
 
     }
     std::cout<<"\n";
 
-    Image<my_nn::float_t> img_in(28,   28, std::begin(mnist.image(999).data()), std::end(mnist.image(999).data()));
+    Image<my_nn::float_t> img_in(28,   28, std::begin(mnist.image(steps-1).data()), std::end(mnist.image(steps-1).data()));
     Image<my_nn::float_t> img_c1(24, 24*2, std::begin(C1.output()), std::end(C1.output()));
     Image<my_nn::float_t> img_s2(12, 12*2, std::begin(S2.output()), std::end(S2.output()));
     Image<my_nn::float_t> img_c3(10, 10*5, std::begin(C3.output()), std::end(C3.output()));
     Image<my_nn::float_t> img_s4( 5,  5*5, std::begin(S4.output()), std::end(S4.output()));
-    Image<my_nn::float_t> img_c5( 5,  1*5, std::begin(C5.output()), std::end(C5.output()));
-    Image<my_nn::float_t> img_o6(10,   10, std::begin(O6.output()), std::end(O6.output()));
+    Image<my_nn::float_t> img_c5( 4,    4, std::begin(C5.output()), std::end(C5.output()));
+    Image<my_nn::float_t> img_o6( 1,   10, std::begin(O6.output()), std::end(O6.output()));
     
     
     cv::Mat img(cv::Size(400,100), CV_8UC1, 100);
@@ -208,7 +213,7 @@ int
 main(int argc, const char *argv[])
 {
 
-#if 0
+#if 1
     fullyconnected_test();
 #endif
 
@@ -216,7 +221,7 @@ main(int argc, const char *argv[])
     cnn_test_forward();
 #endif
 
-#if 1
+#if 0
     cnn_training_test();
 #endif
 

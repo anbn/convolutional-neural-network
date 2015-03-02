@@ -168,6 +168,7 @@ public:
             in_width_(in_width), out_width_(out_width),
             filter_width_(in_width-out_width+1) {
         std::cout<<"DEBUG: convolutional_layer(" <<in_width<<","<<out_width<<","<<in_feature_maps<<","<<out_feature_maps_<<")\n";
+        std::cout<<"  DEBUG: "<<filter_width_<<std::endl;
     }
 
     size_t out_feature_maps() const { return out_feature_maps_; }
@@ -179,6 +180,10 @@ public:
         assert(in_width == in_width_);
         assert(in_feature_maps == in_feature_maps_);
         assert(in.size() == in_feature_maps_ * in_width_ * in_width_);
+
+
+        for (int i=0; i<in.size(); i++) 
+            {std::cout<<"("<<in[i]<<")\n"; }
 
         for (int fm=0; fm<out_feature_maps_; fm++) {
 
@@ -193,8 +198,9 @@ public:
                        
                         for (int fx=0; fx<filter_width_; fx++) {
                             for (int fy=0; fy<filter_width_; fy++) {
-                                sum += weights_[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy] * 
-                                          in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
+                                sum += weights_[((in_fm*out_feature_maps_ + fm)*filter_width_ + fx)*filter_width_ + fy] *
+                                        in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
+
                             }
                         }
                     }

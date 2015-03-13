@@ -1,9 +1,10 @@
 # Todo
 
-## To get it working properly
+* refactor
+* backward network
 
-* implement finite difference checking for bias
+## Nice to hace
 
-## Nice to have
-
-* support subsampling over n*n instead of only 2*2 blocks
+* stochastic GD
+* Adadelta
+* Hessian training

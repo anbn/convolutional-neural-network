@@ -208,10 +208,10 @@ fullyconnected_test2()
 void
 cnn_training_test2()
 {
+    const int steps = 100000;
     mnist_reader mnist;
     mnist.read( "data/mnist/train-images-idx3-ubyte",
-                "data/mnist/train-labels-idx1-ubyte", 10000);
-    const int steps = 100000;
+                "data/mnist/train-labels-idx1-ubyte", std::min(steps, 60000));
 
     neural_network nn;
     convolutional_layer<tan_h>  C1(28 /* in_width*/, 24 /* out_width*/, 1 /*in_fm*/,6 /*out_fm*/);
@@ -270,7 +270,7 @@ cnn_training_test2()
         S2.backward(C1.output(), C3);
         C1.backward(mnist.image(num_example).data(), S2);
 
-        if ( s % 10000 < 50 ) {
+        if ( s%1000 < 25 ) {
             std::cout<<"\n";
 
             Image<my_nn::float_t> img_in(28, 1*28, std::begin(mnist.image(num_example).data()), std::end(mnist.image(num_example).data()));
@@ -293,7 +293,6 @@ cnn_training_test2()
             img_o7.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(350,0,img_o7.width(), img_o7.height())));
 
             cv::imshow("cnn", img);
-            if (error!=error) break;
             while(cv::waitKey(0)!=27);
         }
     }
@@ -304,18 +303,18 @@ void
 gc_cnn_training()
 {
     mnist_reader mnist;
-    mnist.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 10000);
+    mnist.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 60000);
 
     const my_nn::float_t gc_epsilon = 0.00001;
     std::cout.precision(16);
     std::cout.setf(std::ios::fixed, std::ios::floatfield);
 
     neural_network nn;
-    convolutional_layer<tan_h>  C1(28 /* in_width*/, 24 /* out_width*/, 1 /*in_fm*/,6 /*out_fm*/);
-    subsampling_layer<tan_h>    S2(24 /* in_width*/, 12 /* out_width*/, 6 /*fm*/, 2 /*block_size*/);
-    convolutional_layer<tan_h>  C3(12 /* in_width*/, 10 /* out_width*/, 6 /*in_fm*/,16 /*out_fm*/);
-    subsampling_layer<tan_h>    S4(10 /* in_width*/,  5 /* out_width*/, 16 /*fm*/, 2 /*block_size*/);
-    convolutional_layer<tan_h>  C5( 5 /* in_width*/,  1 /* out_width*/, 16 /*in_fm*/,12 /*out_fm*/);
+    convolutional_layer<tan_h>  C1(28 /* in_width*/, 24 /* out_width*/,  1 /*in_fm*/,  6 /*out_fm*/);
+    subsampling_layer<tan_h>    S2(24 /* in_width*/, 12 /* out_width*/,  6 /*fm*/,     2 /*block_size*/);
+    convolutional_layer<tan_h>  C3(12 /* in_width*/, 10 /* out_width*/,  6 /*in_fm*/, 16 /*out_fm*/);
+    subsampling_layer<tan_h>    S4(10 /* in_width*/,  5 /* out_width*/, 16 /*fm*/,     2 /*block_size*/);
+    convolutional_layer<tan_h>  C5( 5 /* in_width*/,  1 /* out_width*/, 16 /*in_fm*/, 12 /*out_fm*/);
     fullyconnected_layer<tan_h> O6(12 /* in_width*/, 10 /* out_width*/);
     nn.add_layer(&C1);
     nn.add_layer(&S2);

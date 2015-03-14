@@ -5,6 +5,7 @@
 
 namespace my_nn {
 
+typedef unsigned int uint_t;
 typedef double float_t;
 typedef std::vector<float_t> vec_t;
 

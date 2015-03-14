@@ -214,11 +214,11 @@ cnn_training_test2()
                 "data/mnist/train-labels-idx1-ubyte", std::min(steps, 60000));
 
     neural_network nn;
-    convolutional_layer<tan_h>  C1(28 /* in_width*/, 24 /* out_width*/, 1 /*in_fm*/,6 /*out_fm*/);
-    subsampling_layer<tan_h>    S2(24 /* in_width*/, 12 /* out_width*/, 6 /*fm*/, 2 /*block_size*/);
-    convolutional_layer<tan_h>  C3(12 /* in_width*/, 10 /* out_width*/, 6 /*in_fm*/,16 /*out_fm*/);
-    subsampling_layer<tan_h>    S4(10 /* in_width*/,  5 /* out_width*/, 16 /*fm*/, 2 /*block_size*/);
-    convolutional_layer<tan_h>  C5( 5 /* in_width*/,  1 /* out_width*/, 16 /*in_fm*/,64 /*out_fm*/);
+    convolutional_layer<tan_h>  C1(28 /* in_width*/, 24 /* out_width*/, 1 /*in_fm*/,   6 /*out_fm*/);
+    subsampling_layer<tan_h>    S2(24 /* in_width*/, 12 /* out_width*/, 6 /*fm*/,      2 /*block_size*/);
+    convolutional_layer<tan_h>  C3(12 /* in_width*/, 10 /* out_width*/, 6 /*in_fm*/,  16 /*out_fm*/);
+    subsampling_layer<tan_h>    S4(10 /* in_width*/,  5 /* out_width*/, 16 /*fm*/,     2 /*block_size*/);
+    convolutional_layer<tan_h>  C5( 5 /* in_width*/,  1 /* out_width*/, 16 /*in_fm*/, 64 /*out_fm*/);
     fullyconnected_layer<tan_h> O6(64 /* in_width*/, 32 /* out_width*/);
     fullyconnected_layer<tan_h> O7(32 /* in_width*/, 10 /* out_width*/);
     nn.add_layer(&C1);
@@ -246,7 +246,7 @@ cnn_training_test2()
     int last_label = 0;
     for(int s=0; s<steps; s++) {
         
-        if (s!=0 && s%1000==0) nn.set_learningrate(1.0/s);
+        if (s!=0 && s%1000==0) nn.set_learningrate(1.0/(s*s));
         
         int num_example = s % mnist.num_examples();
 
@@ -270,7 +270,7 @@ cnn_training_test2()
         S2.backward(C1.output(), C3);
         C1.backward(mnist.image(num_example).data(), S2);
 
-        if ( s%1000 < 25 ) {
+        if ( s%10000 < 25 ) {
             std::cout<<"\n";
 
             Image<my_nn::float_t> img_in(28, 1*28, std::begin(mnist.image(num_example).data()), std::end(mnist.image(num_example).data()));

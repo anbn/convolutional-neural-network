@@ -20,8 +20,8 @@ class layer {
     
 public:
 
-    size_t in_dim() const { return in_dim_; }
-    size_t out_dim() const { return out_dim_; }
+    uint_t in_dim() const { return in_dim_; }
+    uint_t out_dim() const { return out_dim_; }
 
     const vec_t& output() const { return output_; }
     const vec_t& delta() const { return delta_; }
@@ -37,24 +37,25 @@ public:
         learning_rate = l;
     }
 
-    virtual float_t in_delta_sum(int fm, int ix,int iy) const = 0;
-    virtual void forward(const vec_t& in /*[in_dim]*/) = 0;
+    virtual float_t in_delta_sum(uint_t fm, uint_t ix, uint_t iy) const = 0;
+    virtual void forward(const vec_t& in) = 0;
+    virtual void backward(const vec_t& in, const layer& next_layer) = 0;
 
 #if GRADIENT_CHECK
     vec_t gc_gradient_weights_,
           gc_gradient_bias_;
 
-    float_t gc_gradient_weights(int i) const { return gc_gradient_weights_[i]; }
-    float_t gc_gradient_bias(int i) const { return gc_gradient_bias_[i]; }
-    float_t get_weight(int i) const { return weights_[i]; }
-    void    set_weight(int i, float_t v) { weights_[i] = v; }
-    float_t get_bias(int i) const { return bias_[i]; }
-    void    set_bias(int i, float_t v) { bias_[i] = v; }
+    float_t gc_gradient_weights(uint_t i) const { return gc_gradient_weights_[i]; }
+    float_t gc_gradient_bias(uint_t i) const { return gc_gradient_bias_[i]; }
+    float_t get_weight(uint_t i) const { return weights_[i]; }
+    void    set_weight(uint_t i, float_t v) { weights_[i] = v; }
+    float_t get_bias(uint_t i) const { return bias_[i]; }
+    void    set_bias(uint_t i, float_t v) { bias_[i] = v; }
 #endif
 
 protected:
     
-    layer(size_t in_dim, size_t out_dim, size_t bias_dim, size_t weights_dim) : in_dim_(in_dim), out_dim_(out_dim) {
+    layer(uint_t in_dim, uint_t out_dim, uint_t bias_dim, uint_t weights_dim) : in_dim_(in_dim), out_dim_(out_dim) {
         weights_.resize(weights_dim);
         output_.resize(out_dim_);
         bias_.resize(bias_dim);
@@ -67,8 +68,8 @@ protected:
     }
 
     
-    size_t in_dim_;
-    size_t out_dim_;
+    uint_t in_dim_;
+    uint_t out_dim_;
 
     vec_t weights_;     /* variable size, depending on layer type */
     vec_t delta_;       /* [out_dim_] */
@@ -86,20 +87,20 @@ class fullyconnected_layer : public layer {
 
 public:
 
-    fullyconnected_layer(size_t in_dim, size_t out_dim)
+    fullyconnected_layer(uint_t in_dim, uint_t out_dim)
         : layer(in_dim, out_dim, out_dim, in_dim*out_dim) {
         std::cout<<"DEBUG: fullyconnected_layer(" <<in_dim<<","<<out_dim<<")\n";
-    };
+    }
 
 
     void forward(const vec_t& in /*[in_dim]*/) {
         
         assert(in.size() == in_dim_);
 
-        for (int o=0; o<out_dim_; o++) {
+        for (uint_t o=0; o<out_dim_; o++) {
             
             float_t sum=0.0;
-            for (int i=0; i<in_dim_; i++) {
+            for (uint_t i=0; i<in_dim_; i++) {
                 sum += in[i] * weights_[o*in_dim_ + i];
             }
             output_[o] = A_.f(sum + bias_[o]);
@@ -111,24 +112,24 @@ public:
         assert(soll.size()==out_dim_);
         
         float_t error = 0.0;
-        for(int o=0; o<out_dim_; o++)
+        for(uint_t o=0; o<out_dim_; o++)
             error += (soll[o]-output_[o])*(soll[o]-output_[o]);
         return error;
     }
 
-    float_t in_delta_sum(int fm, int ix, int iy) const {
+    float_t in_delta_sum(uint_t fm, uint_t ix, uint_t iy) const {
         
         assert(fm < in_dim_);
         assert(ix==0 && iy==0);
         
         float_t sum = 0.0;
-        for(int o=0; o<out_dim_; o++)
+        for(uint_t o=0; o<out_dim_; o++)
             sum += delta_[o] * weights_[o*in_dim_ + fm];
         return sum;
     }
 
     /* backpropagation for any layer except the last one */
-    void backward(const vec_t& in, const fullyconnected_layer& next_layer) {
+    void backward(const vec_t& in, const layer& next_layer) {
 #if VERBOSE
         std::cout<<"(backwardfully) ";
 #endif
@@ -136,11 +137,14 @@ public:
         assert(in.size()==in_dim_);
         assert(next_layer.in_dim()==out_dim_);
 
-        for (int o=0; o<out_dim_; o++) {
+        for (uint_t o=0; o<out_dim_; o++) {
 
-            delta_[o] = A_.df(output_[o]) * next_layer.in_delta_sum(o,0,0); //vs. delta_[o] = output_[o] * A_.df(output_[o]) * sum; // check at home
-           
-            for (int i=0; i<in_dim_; i++) {
+            //if (soll_!=nullptr) { /* is the last layer */
+            //    delta_[o] = (output_[o]-(*soll_)[o]) * A_.df(output_[o]); 
+            //} else {               /* not the last layer */
+                delta_[o] = A_.df(output_[o]) * next_layer.in_delta_sum(o,0,0); //vs. delta_[o] = output_[o] * A_.df(output_[o]) * sum; // check at home
+            //}
+            for (uint_t i=0; i<in_dim_; i++) {
 #if GRADIENT_CHECK
                 gc_gradient_weights_[o*in_dim_ + i] = delta_[o] * in[i]; 
 #else
@@ -164,11 +168,11 @@ public:
         assert(previous_layer.out_dim()==in_dim_);
         assert(soll.size()==out_dim_);
 
-        for (int o=0; o<out_dim_; o++) {
+        for (uint_t o=0; o<out_dim_; o++) {
 
             delta_[o] = (output_[o]-soll[o]) * A_.df(output_[o]);
 
-            for (int i=0; i<in_dim_; i++) {
+            for (uint_t i=0; i<in_dim_; i++) {
 #if GRADIENT_CHECK
                 gc_gradient_weights_[o*in_dim_ + i] = delta_[o]*previous_layer.output()[i]; 
 #else
@@ -183,7 +187,14 @@ public:
         } 
     }
 
+    void set_soll( const vec_t* soll ) {
+        soll_ = soll;
+    }
+
     ActivationFunction A_;
+
+private:
+    vec_t* soll_ = nullptr;
 };
 
 
@@ -194,28 +205,28 @@ class convolutional_layer : public layer {
     class connection_table {
 
     public:
-        connection_table() : in_feature_maps_(0), out_feature_maps_(0) {};
-        connection_table(const bool *p, size_t in, size_t out)
+        connection_table() : in_feature_maps_(0), out_feature_maps_(0) {}
+        connection_table(const bool *p, uint_t in, uint_t out)
         : connected_(in*out),
         in_feature_maps_(in),
         out_feature_maps_(out) {
             std::copy(p, p + in*out, connected_.begin());
-        };
+        }
 
-        inline bool is_connected(int i, int o) const {
+        inline bool is_connected(uint_t i, uint_t o) const {
             return (in_feature_maps_==0) && (out_feature_maps_==0) ? true : connected_[i * out_feature_maps_ + o];
         }
 
     private:
         std::vector<bool> connected_;
-        size_t in_feature_maps_;
-        size_t out_feature_maps_;
+        uint_t in_feature_maps_;
+        uint_t out_feature_maps_;
     };
 
     
 public:
 
-    convolutional_layer(size_t in_width, size_t out_width, size_t in_feature_maps, size_t out_feature_maps)
+    convolutional_layer(uint_t in_width, uint_t out_width, uint_t in_feature_maps, uint_t out_feature_maps)
             : layer(in_feature_maps*in_width*in_width, out_feature_maps*out_width*out_width, out_feature_maps, in_feature_maps*out_feature_maps*(in_width-out_width+1)*(in_width-out_width+1)),
             in_feature_maps_(in_feature_maps),out_feature_maps_(out_feature_maps),
             in_width_(in_width), out_width_(out_width),
@@ -223,9 +234,9 @@ public:
         std::cout<<"DEBUG: convolutional_layer(" <<in_width<<","<<out_width<<","<<in_feature_maps<<","<<out_feature_maps_<<")\n";
     }
 
-    size_t out_feature_maps() const { return out_feature_maps_; }
-    size_t in_feature_maps() const { return in_feature_maps_; }
-    size_t filter_width() const { return filter_width_; }
+    uint_t out_feature_maps() const { return out_feature_maps_; }
+    uint_t in_feature_maps() const { return in_feature_maps_; }
+    uint_t filter_width() const { return filter_width_; }
 
     void set_connection(const bool *p) {
         connection_ = connection_table(p, in_feature_maps_, out_feature_maps_);
@@ -238,19 +249,19 @@ public:
         assert(weights_.size() == in_feature_maps_*out_feature_maps_*filter_width_*filter_width_);
 
         
-        for (int out_fm=0; out_fm<out_feature_maps_; out_fm++) {
+        for (uint_t out_fm=0; out_fm<out_feature_maps_; out_fm++) {
 
-            for (int ox=0; ox<out_width_; ox++) {
-                for (int oy=0; oy<out_width_; oy++) {
+            for (uint_t ox=0; ox<out_width_; ox++) {
+                for (uint_t oy=0; oy<out_width_; oy++) {
 
                     float_t sum = 0.0;
-                    for (int in_fm=0; in_fm<in_feature_maps_; in_fm++) {
+                    for (uint_t in_fm=0; in_fm<in_feature_maps_; in_fm++) {
 
                         if (!connection_.is_connected(in_fm, out_fm))
                             continue;
 
-                        for (int fx=0; fx<filter_width_; fx++) {
-                            for (int fy=0; fy<filter_width_; fy++) {
+                        for (uint_t fx=0; fx<filter_width_; fx++) {
+                            for (uint_t fy=0; fy<filter_width_; fy++) {
                                 sum += weights_[((in_fm*out_feature_maps_ + out_fm)*filter_width_ + fx)*filter_width_ + fy] *
                                     in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
                             }
@@ -263,7 +274,7 @@ public:
     }
 
     /* convolutional_layer */
-    float_t in_delta_sum(int in_fm, int ix, int iy) const {
+    float_t in_delta_sum(uint_t in_fm, uint_t ix, uint_t iy) const {
 
         assert(in_fm < in_feature_maps_);
         assert(ix < in_width_);
@@ -271,13 +282,13 @@ public:
 
         // FIX ME
         float_t sum = 0.0;
-        for (int out_fm=0; out_fm<out_feature_maps_; out_fm++) {
+        for (uint_t out_fm=0; out_fm<out_feature_maps_; out_fm++) {
             
             if(!connection_.is_connected(in_fm, out_fm))
                 continue;
 
-            for(int fx = 0; fx<filter_width_; fx++ ) {
-                for(int fy = 0; fy<filter_width_; fy++ ) {
+            for(uint_t fx = 0; fx<filter_width_; fx++ ) {
+                for(uint_t fy = 0; fy<filter_width_; fy++ ) {
                     if ((ix-fx>=0) && (iy-fy>=0) && (ix-fx<out_width_) && (iy-fy<out_width_)) {
                         sum += delta_[(out_fm*out_width_ + (ix-fx))*out_width_ + (iy-fy)] * 
                                 weights_[((in_fm*out_feature_maps_ + out_fm)*filter_width_ + fx)*filter_width_ + fy];
@@ -298,12 +309,12 @@ public:
         assert(weights_.size() == in_feature_maps_*out_feature_maps_*filter_width_*filter_width_);
 
 
-        for (int out_fm=0; out_fm<out_feature_maps_; out_fm++) {
+        for (uint_t out_fm=0; out_fm<out_feature_maps_; out_fm++) {
             
             float_t sum_delta = 0.0;
-            for (int ox=0; ox<out_width_; ox++) {
-                for (int oy=0; oy<out_width_; oy++) {
-                    int out_index = (out_fm*out_width_+ ox)*out_width_ + oy;
+            for (uint_t ox=0; ox<out_width_; ox++) {
+                for (uint_t oy=0; oy<out_width_; oy++) {
+                    uint_t out_index = (out_fm*out_width_+ ox)*out_width_ + oy;
                     delta_[out_index] = A_.df(output_[out_index]) * next_layer.in_delta_sum(out_fm, ox, oy);
                     sum_delta += delta_[out_index];
                 }
@@ -313,17 +324,17 @@ public:
 #else
             bias_[out_fm] -= learning_rate * sum_delta;
 #endif       
-            for (int in_fm=0; in_fm<in_feature_maps_; in_fm++) {
+            for (uint_t in_fm=0; in_fm<in_feature_maps_; in_fm++) {
 
                 if (!connection_.is_connected(in_fm, out_fm))
                     continue;
 
-                for (int fx=0; fx<filter_width_; fx++) {
-                    for (int fy=0; fy<filter_width_; fy++) {
+                for (uint_t fx=0; fx<filter_width_; fx++) {
+                    for (uint_t fy=0; fy<filter_width_; fy++) {
 
                         float_t sum = 0.0;
-                        for (int ox=0; ox<out_width_; ox++) {
-                            for (int oy=0; oy<out_width_; oy++) {
+                        for (uint_t ox=0; ox<out_width_; ox++) {
+                            for (uint_t oy=0; oy<out_width_; oy++) {
                                 sum += delta_[(out_fm*out_width_+ ox)*out_width_ + oy] *
                                     in[(in_fm*in_width_ + (ox+fx))*in_width_ + (oy+fy)];
                             }
@@ -344,9 +355,9 @@ private:
     ActivationFunction A_;
 
     connection_table connection_;
-    size_t in_feature_maps_, out_feature_maps_;
-    size_t in_width_, out_width_;
-    size_t filter_width_;
+    uint_t in_feature_maps_, out_feature_maps_;
+    uint_t in_width_, out_width_;
+    uint_t filter_width_;
 };
 
 
@@ -355,7 +366,7 @@ class subsampling_layer : public layer {
 
 public:
 
-    subsampling_layer(size_t in_width, size_t out_width, size_t feature_maps, size_t block_size)
+    subsampling_layer(uint_t in_width, uint_t out_width, uint_t feature_maps, uint_t block_size)
             : layer(feature_maps*in_width*in_width, feature_maps*out_width*out_width, feature_maps, feature_maps),
             feature_maps_(feature_maps),
             block_size_(block_size),
@@ -371,14 +382,14 @@ public:
         assert(in_width_ == out_width_*block_size_); // unecessary, fix later
         assert(in.size() == feature_maps_ * in_width_ * in_width_);
 
-        for (int fm=0; fm<feature_maps_; fm++) {
+        for (uint_t fm=0; fm<feature_maps_; fm++) {
             
-            for (int ox=0; ox<out_width_; ox++) {
-                for (int oy=0; oy<out_width_; oy++) {
+            for (uint_t ox=0; ox<out_width_; ox++) {
+                for (uint_t oy=0; oy<out_width_; oy++) {
 
                     float_t sum = 0.0;
-                    for (int bx=0; bx<block_size_; bx++) {
-                        for (int by=0; by<block_size_; by++) {
+                    for (uint_t bx=0; bx<block_size_; bx++) {
+                        for (uint_t by=0; by<block_size_; by++) {
                             sum += in[(fm*in_width_ + (block_size_*ox+bx))*in_width_ + (block_size_*oy+by)];
                         }
                     }
@@ -395,7 +406,7 @@ public:
         }
     }
     
-    float_t in_delta_sum(int fm, int ix, int iy) const {
+    float_t in_delta_sum(uint_t fm, uint_t ix, uint_t iy) const {
 
         assert(fm < feature_maps_);
         assert(ix < in_width_);
@@ -411,20 +422,20 @@ public:
         assert(in.size()==in_dim_);
         assert(next_layer.in_dim()==out_dim_);
 
-        for (int fm=0; fm<feature_maps_; fm++) {
+        for (uint_t fm=0; fm<feature_maps_; fm++) {
 
             float_t sum = 0.0;
             float_t sum_delta = 0.0;
-            for (int ox=0; ox<out_width_; ox++) {
-                for (int oy=0; oy<out_width_; oy++) {
+            for (uint_t ox=0; ox<out_width_; ox++) {
+                for (uint_t oy=0; oy<out_width_; oy++) {
 
-                    const int out_index = (fm*out_width_+ ox)*out_width_ + oy;
+                    const uint_t out_index = (fm*out_width_+ ox)*out_width_ + oy;
                     delta_[out_index] = A_.df(output_[out_index]) * next_layer.in_delta_sum(fm,ox,oy);
                     sum_delta += delta_[out_index]; 
                     
                     float_t sum_block = 0.0;
-                    for (int bx=0; bx<block_size_; bx++) {
-                        for (int by=0; by<block_size_; by++) {
+                    for (uint_t bx=0; bx<block_size_; bx++) {
+                        for (uint_t by=0; by<block_size_; by++) {
                             sum_block += in[(fm*in_width_ + (block_size_*ox+bx  ))*in_width_ + (block_size_*oy+by  )];
                         }
                     }
@@ -451,18 +462,19 @@ private:
     
     ActivationFunction A_;
 
-    size_t feature_maps_;   /* feature_maps_ == in_feature_maps_ == out_feature_maps_ */
-    size_t block_size_;
-    size_t in_width_, out_width_;
+    uint_t feature_maps_;   /* feature_maps_ == in_feature_maps_ == out_feature_maps_ */
+    uint_t block_size_;
+    uint_t in_width_, out_width_;
 };
 
 
+//template<typename ActivationFunction>
 class neural_network {
 
 public:
     
-    size_t in_dim() const { assert(!layers_.empty()); return layers_.front()->in_dim(); }
-    size_t out_dim() const { assert(!layers_.empty()); return layers_.back()->out_dim(); }
+    uint_t in_dim() const { assert(!layers_.empty()); return layers_.front()->in_dim(); }
+    uint_t out_dim() const { assert(!layers_.empty()); return layers_.back()->out_dim(); }
 
     const vec_t& output() const { assert(!layers_.empty()); return layers_.back()->output(); };
 
@@ -488,11 +500,21 @@ public:
         }
     }
 
-    void backward(const vec_t& in, const vec_t& soll) {
+    /*void backward(const vec_t& in, const vec_t& soll) {
+        auto iter = layers_.rbegin();
+       
+        fullyconnected_layer<ActivationFunction> &last =
+                dynamic_cast<fullyconnected_layer<ActivationFunction>>(*iter);
+        last.set_soll(&soll);
+        while(iter!= layers_.rend()) {
 
-    }
+            ++iter;
+        } 
+    }*/
 
 private:
+
+
     std::list<layer*> layers_;
 };
 

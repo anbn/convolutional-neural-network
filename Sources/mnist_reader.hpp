@@ -13,14 +13,14 @@ class mnist_reader {
     
 public:
 
-    size_t num_examples() const { return num_examples_; }
-    size_t image_width() const { return image_width_; }
-    size_t image_height() const { return image_height_; }
+    uint_t num_examples() const { return num_examples_; }
+    uint_t image_width() const { return image_width_; }
+    uint_t image_height() const { return image_height_; }
 
-    const Image<float_t>& image(int n) { return images_[n]; }
-    int   label(int n) { return labels_[n]; }
+    const Image<float_t>& image(uint_t n) { return images_[n]; }
+    int   label(uint_t n) { return labels_[n]; }
 
-    mnist_reader() : num_examples_(0) {};
+    mnist_reader() : num_examples_(0) {}
 
 //    void rescale(float_t min, float_t max) {
 //        for (auto& img : images_)
@@ -28,7 +28,7 @@ public:
 //    
 //    }
     
-    bool read(std::string filename_images, std::string filename_labels, size_t num) {
+    bool read(std::string filename_images, std::string filename_labels, uint_t num) {
         std::cout<<"Reading mnist... ";
         
         if (num == 0 || num > 60000) {
@@ -55,8 +55,8 @@ public:
         file_labels.read(reinterpret_cast<char*>(&magic_labels), sizeof(uint32_t));
         endswap(&magic_images);
         endswap(&magic_labels);
-        if (magic_images != 0x00000803 || magic_labels != 0x00000801) {
-            std::cout<< "\nUnexpected magic numbers, probably not a MNIST file.\n";
+        if (magic_images != 0x0803 || magic_labels != 0x0801) {
+            std::cout<< "\nUnexpected magic number, probably not a MNIST file.\n";
             file_images.close();
             file_labels.close();
             return false;
@@ -74,10 +74,10 @@ public:
 
         unsigned char byte, label;
         std::vector<float_t> data(rows*columns);
-        for (size_t n = 0; n<num; ++n) {
+        for (uint_t n = 0; n<num; ++n) {
             
             file_labels.read(reinterpret_cast<char*>(&label), sizeof(unsigned char));
-            for (int i=0; i<rows*columns; i++) {
+            for (uint_t i=0; i<rows*columns; i++) {
                 file_images.read(reinterpret_cast<char*>(&byte), sizeof(unsigned char));
                 data[i] = (byte / 128.0)-1;
             }
@@ -95,16 +95,16 @@ public:
         return true;
     }
 
-    void corrupt(int n) 
+    void corrupt(uint_t n) 
     {
         images_[n].fill(0);
     }
 protected:
 
-    size_t num_examples_;
+    uint_t num_examples_;
         
-    size_t image_width_;
-    size_t image_height_;
+    uint_t image_width_;
+    uint_t image_height_;
     std::vector< Image<float_t> > images_;
     std::vector<int> labels_;
 };

@@ -88,7 +88,8 @@ class fullyconnected_layer : public layer {
 public:
 
     fullyconnected_layer(uint_t in_dim, uint_t out_dim)
-        : layer(in_dim, out_dim, out_dim, in_dim*out_dim) {
+        : layer(in_dim, out_dim, out_dim, in_dim*out_dim)
+    {
         std::cout<<"DEBUG: fullyconnected_layer(" <<in_dim<<","<<out_dim<<")\n";
     }
 
@@ -142,7 +143,7 @@ public:
             //if (soll_!=nullptr) { /* is the last layer */
             //    delta_[o] = (output_[o]-(*soll_)[o]) * A_.df(output_[o]); 
             //} else {               /* not the last layer */
-                delta_[o] = A_.df(output_[o]) * next_layer.in_delta_sum(o,0,0); //vs. delta_[o] = output_[o] * A_.df(output_[o]) * sum; // check at home
+                delta_[o] = A_.df(output_[o]) * next_layer.in_delta_sum(o,0,0);
             //}
             for (uint_t i=0; i<in_dim_; i++) {
 #if GRADIENT_CHECK
@@ -202,53 +203,37 @@ private:
 template <typename ActivationFunction = sigmoid>
 class convolutional_layer : public layer {
 
-    class connection_table {
-
-    public:
-        connection_table() : in_feature_maps_(0), out_feature_maps_(0) {}
-        connection_table(const bool *p, uint_t in, uint_t out)
-        : connected_(in*out),
-        in_feature_maps_(in),
-        out_feature_maps_(out) {
-            std::copy(p, p + in*out, connected_.begin());
-        }
-
-        inline bool is_connected(uint_t i, uint_t o) const {
-            return (in_feature_maps_==0) && (out_feature_maps_==0) ? true : connected_[i * out_feature_maps_ + o];
-        }
-
-    private:
-        std::vector<bool> connected_;
-        uint_t in_feature_maps_;
-        uint_t out_feature_maps_;
-    };
-
-    
 public:
 
     convolutional_layer(uint_t in_width, uint_t out_width, uint_t in_feature_maps, uint_t out_feature_maps)
             : layer(in_feature_maps*in_width*in_width, out_feature_maps*out_width*out_width, out_feature_maps, in_feature_maps*out_feature_maps*(in_width-out_width+1)*(in_width-out_width+1)),
             in_feature_maps_(in_feature_maps),out_feature_maps_(out_feature_maps),
             in_width_(in_width), out_width_(out_width),
-            filter_width_(in_width-out_width+1) {
+            filter_width_(in_width-out_width+1)
+    {
         std::cout<<"DEBUG: convolutional_layer(" <<in_width<<","<<out_width<<","<<in_feature_maps<<","<<out_feature_maps_<<")\n";
+        connected_.resize(in_feature_maps_*out_feature_maps);
+        std::fill(std::begin(connected_), std::end(connected_), true);
     }
 
     uint_t out_feature_maps() const { return out_feature_maps_; }
     uint_t in_feature_maps() const { return in_feature_maps_; }
     uint_t filter_width() const { return filter_width_; }
 
-    void set_connection(const bool *p) {
-        connection_ = connection_table(p, in_feature_maps_, out_feature_maps_);
+    void set_connection(const bool *p, uint_t size) {
+        assert(size == in_feature_maps_*out_feature_maps_);
+        std::copy(p, p + in_feature_maps_*out_feature_maps_, connected_.begin());
     }
-
+    
+    inline bool is_connected(uint_t i, uint_t o) const {
+        return connected_[i * out_feature_maps_ + o];
+    }
 
     void forward(const vec_t& in /*[in_feature_map * in_width * in_width]*/) {
         
         assert(in.size() == in_feature_maps_ * in_width_ * in_width_);
         assert(weights_.size() == in_feature_maps_*out_feature_maps_*filter_width_*filter_width_);
 
-        
         for (uint_t out_fm=0; out_fm<out_feature_maps_; out_fm++) {
 
             for (uint_t ox=0; ox<out_width_; ox++) {
@@ -257,7 +242,7 @@ public:
                     float_t sum = 0.0;
                     for (uint_t in_fm=0; in_fm<in_feature_maps_; in_fm++) {
 
-                        if (!connection_.is_connected(in_fm, out_fm))
+                        if (!is_connected(in_fm, out_fm))
                             continue;
 
                         for (uint_t fx=0; fx<filter_width_; fx++) {
@@ -280,11 +265,10 @@ public:
         assert(ix < in_width_);
         assert(iy < in_width_);
 
-        // FIX ME
         float_t sum = 0.0;
         for (uint_t out_fm=0; out_fm<out_feature_maps_; out_fm++) {
             
-            if(!connection_.is_connected(in_fm, out_fm))
+            if(!is_connected(in_fm, out_fm))
                 continue;
 
             for(uint_t fx = 0; fx<filter_width_; fx++ ) {
@@ -326,7 +310,7 @@ public:
 #endif       
             for (uint_t in_fm=0; in_fm<in_feature_maps_; in_fm++) {
 
-                if (!connection_.is_connected(in_fm, out_fm))
+                if (!is_connected(in_fm, out_fm))
                     continue;
 
                 for (uint_t fx=0; fx<filter_width_; fx++) {
@@ -354,10 +338,10 @@ private:
     
     ActivationFunction A_;
 
-    connection_table connection_;
     uint_t in_feature_maps_, out_feature_maps_;
     uint_t in_width_, out_width_;
     uint_t filter_width_;
+    std::vector<bool> connected_;
 };
 
 
@@ -370,7 +354,8 @@ public:
             : layer(feature_maps*in_width*in_width, feature_maps*out_width*out_width, feature_maps, feature_maps),
             feature_maps_(feature_maps),
             block_size_(block_size),
-            in_width_(in_width), out_width_(out_width) {
+            in_width_(in_width), out_width_(out_width)
+    {
 
         std::cout<<"DEBUG: subsampling_layer(" <<in_width_<<","<<out_width_<<","<<feature_maps_<<", "<<block_size_<<")\n";
         
@@ -379,7 +364,6 @@ public:
 
     void forward(const vec_t& in /*[in_feature_map * in_width_ * in_width_]*/) {
         
-        assert(in_width_ == out_width_*block_size_); // unecessary, fix later
         assert(in.size() == feature_maps_ * in_width_ * in_width_);
 
         for (uint_t fm=0; fm<feature_maps_; fm++) {
@@ -394,13 +378,7 @@ public:
                         }
                     }
 
-                    //float_t sum =   in[(fm*in_width_ + (2*ox  ))*in_width_ + (2*oy  )] +
-                    //                in[(fm*in_width_ + (2*ox+1))*in_width_ + (2*oy  )] + 
-                    //                in[(fm*in_width_ + (2*ox  ))*in_width_ + (2*oy+1)] + 
-                    //                in[(fm*in_width_ + (2*ox+1))*in_width_ + (2*oy+1)];
-                   
                     output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( weights_[fm]*sum + bias_[fm] );
-                    //output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f(sum*0.25  );
                 }
             }
         }
@@ -440,11 +418,6 @@ public:
                         }
                     }
                     sum += sum_block * delta_[out_index];
-                    //sum += (in[(fm*in_width_ + (2*ox  ))*in_width_ + (2*oy  )] +
-                    //        in[(fm*in_width_ + (2*ox+1))*in_width_ + (2*oy  )] + 
-                    //        in[(fm*in_width_ + (2*ox  ))*in_width_ + (2*oy+1)] + 
-                    //        in[(fm*in_width_ + (2*ox+1))*in_width_ + (2*oy+1)]) *
-                    //        delta_[out_index];
                 }
             }
 

@@ -211,7 +211,7 @@ cnn_training_test2()
     const int steps = 100000;
     mnist_reader mnist;
     mnist.read( "data/mnist/train-images-idx3-ubyte",
-                "data/mnist/train-labels-idx1-ubyte", std::min(steps, 60000));
+                "data/mnist/train-labels-idx1-ubyte", std::min(steps, 600));
 
     neural_network nn;
     convolutional_layer<tan_h>  C1(28 /* in_width*/, 24 /* out_width*/, 1 /*in_fm*/,   6 /*out_fm*/);
@@ -240,7 +240,7 @@ cnn_training_test2()
     };
 #undef _
 #undef X
-    C3.set_connection(connection);
+    C3.set_connection(connection, 6*16);
     
     vec_t soll {-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8};
     int last_label = 0;

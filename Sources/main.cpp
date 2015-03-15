@@ -230,11 +230,13 @@ cnn_training_test()
     nn.add_layer(&C5);
     nn.add_layer(&O6);
     
+    nn.set_learningrate(1.0/(10000));
+    
     vec_t soll {-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8};
     int last_label = 0;
     for(int s=0; s<steps; s++) {
         
-        if (s!=0 && s%1000==0) nn.set_learningrate(1.0/(s*s));
+        //if (s!=0 && s%1000==0) nn.set_learningrate(1.0/(100000));
         
         int num_example = s % mnist.num_examples();
 
@@ -252,7 +254,7 @@ cnn_training_test()
 
         nn.backward(mnist.image(num_example).data(), soll);
 
-        if ( s%10000 < 25 ) {
+        if ( s%10000 < 50 ) {
             std::cout<<"\n";
 
             Image<my_nn::float_t> img_in(28, 1*28, std::begin(mnist.image(num_example).data()), std::end(mnist.image(num_example).data()));
@@ -262,6 +264,7 @@ cnn_training_test()
             Image<my_nn::float_t> img_s4( 5, 16*5, std::begin(S4.output()), std::end(S4.output()));
             Image<my_nn::float_t> img_c5( 1,   64, std::begin(C5.output()), std::end(C5.output()));
             Image<my_nn::float_t> img_o6( 1,   10, std::begin(O6.output()), std::end(O6.output()));
+            Image<my_nn::float_t> img_so( 1,   10, std::begin(soll), std::end(soll));
 
             cv::Mat img(cv::Size(400,200), CV_8UC1, 100);
             img_in.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
@@ -271,6 +274,7 @@ cnn_training_test()
             img_s4.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(200,0,img_s4.width(), img_s4.height())));
             img_c5.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(250,0,img_c5.width(), img_c5.height())));
             img_o6.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(300,0,img_o6.width(), img_o6.height())));
+            img_so.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(301,0,img_o6.width(), img_o6.height())));
 
             cv::imshow("cnn", img);
             while(cv::waitKey(0)!=27);

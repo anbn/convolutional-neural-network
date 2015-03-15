@@ -3,7 +3,7 @@
 
 #include <random>
 
-namespace my_nn {
+namespace nn {
 
 typedef unsigned int uint_t;
 typedef double float_t;
@@ -29,6 +29,6 @@ void endswap(T *obj)
   std::reverse(memp, memp + sizeof(T));
 }
 
-} /* namespace my_nn */
+} /* namespace nn */
 
 #endif /* UTILS_HPP */

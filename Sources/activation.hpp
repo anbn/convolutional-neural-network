@@ -1,10 +1,9 @@
 #ifndef ACTIVATION_HPP
 #define ACTIVATION_HPP
 
-
 #include "utils.hpp"
 
-namespace my_nn {
+namespace nn {
 
 class activation {
 
@@ -48,7 +47,7 @@ public:
     float_t df(float_t f_x) const { return f_x > 0.0 ? 1.0 : 0.0; }
 };
 
-} /* namespace my_nn */
+} /* namespace nn */
 
 #endif /* activation.hpp */
 

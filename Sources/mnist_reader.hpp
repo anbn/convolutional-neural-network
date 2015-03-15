@@ -4,10 +4,7 @@
 #include "utils.hpp"
 #include "image.hpp"
 
-namespace my_nn {
-
-typedef double float_t;
-typedef std::vector<float_t> vec_t;
+namespace nn {
 
 class mnist_reader {
     
@@ -99,6 +96,7 @@ public:
     {
         images_[n].fill(0);
     }
+
 protected:
 
     uint_t num_examples_;
@@ -109,8 +107,20 @@ protected:
     std::vector<int> labels_;
 };
 
+void mnist_reader_test() {
+    mnist_reader mnist;
+    mnist.read("data/mnist/train-images-idx3-ubyte",
+               "data/mnist/train-labels-idx1-ubyte", 15);
 
-} /* namespace my_nn */
+    for (int i=0; i<mnist.num_examples(); i++) {
+        cv::imshow("images_["+std::to_string(i)+"]: "+std::to_string(mnist.label(i)), mnist.image(i).exportMat());
+    }
+    while(cv::waitKey(0)!=27);
+}
+
+
+
+} /* namespace nn */
 
 #endif /* MNIST_READER.HPP */
 

@@ -7,10 +7,14 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+#define GRADIENT_CHECK  0
+#define VERBOSE         0
+
 #include "network.hpp"
 #include "image.hpp"
+#include "mnist_reader.hpp"
 
-using namespace my_nn;
+using namespace nn;
 
 void print_vec(std::string s, vec_t v) {
     std::cout<<s;
@@ -25,7 +29,7 @@ void print_vec(std::string s, vec_t v) {
 void
 gc_fullyconnected()
 {
-    const my_nn::float_t gc_epsilon = 0.0001;
+    const nn::float_t gc_epsilon = 0.00001;
     std::cout.setf(std::ios::fixed, std::ios::floatfield);
     std::cout.precision(16);
 
@@ -63,7 +67,7 @@ gc_cnn_training()
     mnist.read( "data/mnist/train-images-idx3-ubyte",
                 "data/mnist/train-labels-idx1-ubyte", 10);
 
-    const my_nn::float_t gc_epsilon = 0.00001;
+    const nn::float_t gc_epsilon = 0.00001;
     std::cout.setf(std::ios::fixed, std::ios::floatfield);
     std::cout.precision(16);
 
@@ -163,7 +167,7 @@ fullyconnected_test()
     vec_t input(4);
     vec_t soll(4);
 
-    my_nn::float_t moving_error = 1.0;
+    nn::float_t moving_error = 1.0;
     for(int s=0; s<1000000; s++) {
 
         randomize(input.begin(), input.end(), 0, 1);
@@ -246,7 +250,7 @@ cnn_training_test()
         last_label = mnist.label(num_example);
         soll[last_label] = 1.0;
 
-        my_nn::float_t error = nn.squared_error(soll);
+        nn::float_t error = nn.squared_error(soll);
         std::cout<<"Step: "<<s<<"\n";
         for (int o=0; o<soll.size(); o++)
             std::cout<<"    ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
@@ -255,16 +259,15 @@ cnn_training_test()
         nn.backward(mnist.image(num_example).data(), soll);
 
         if ( s%10000 < 50 ) {
-            std::cout<<"\n";
 
-            Image<my_nn::float_t> img_in(28, 1*28, std::begin(mnist.image(num_example).data()), std::end(mnist.image(num_example).data()));
-            Image<my_nn::float_t> img_c1(24, 6*24, std::begin(C1.output()), std::end(C1.output()));
-            Image<my_nn::float_t> img_s2(12, 6*12, std::begin(S2.output()), std::end(S2.output()));
-            Image<my_nn::float_t> img_c3(10,16*10, std::begin(C3.output()), std::end(C3.output()));
-            Image<my_nn::float_t> img_s4( 5, 16*5, std::begin(S4.output()), std::end(S4.output()));
-            Image<my_nn::float_t> img_c5( 1,   64, std::begin(C5.output()), std::end(C5.output()));
-            Image<my_nn::float_t> img_o6( 1,   10, std::begin(O6.output()), std::end(O6.output()));
-            Image<my_nn::float_t> img_so( 1,   10, std::begin(soll), std::end(soll));
+            Image<nn::float_t> img_in(28, 1*28, std::begin(mnist.image(num_example).data()), std::end(mnist.image(num_example).data()));
+            Image<nn::float_t> img_c1(24, 6*24, std::begin(C1.output()), std::end(C1.output()));
+            Image<nn::float_t> img_s2(12, 6*12, std::begin(S2.output()), std::end(S2.output()));
+            Image<nn::float_t> img_c3(10,16*10, std::begin(C3.output()), std::end(C3.output()));
+            Image<nn::float_t> img_s4( 5, 16*5, std::begin(S4.output()), std::end(S4.output()));
+            Image<nn::float_t> img_c5( 1,   64, std::begin(C5.output()), std::end(C5.output()));
+            Image<nn::float_t> img_o6( 1,   10, std::begin(O6.output()), std::end(O6.output()));
+            Image<nn::float_t> img_so( 1,   10, std::begin(soll), std::end(soll));
 
             cv::Mat img(cv::Size(400,200), CV_8UC1, 100);
             img_in.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
@@ -277,24 +280,12 @@ cnn_training_test()
             img_so.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(301,0,img_o6.width(), img_o6.height())));
 
             cv::imshow("cnn", img);
+            
             while(cv::waitKey(0)!=27);
         }
     }
 }
 
-
-void
-mnist_reader_test()
-{
-    mnist_reader mnist;
-    mnist.read("data/mnist/train-images-idx3-ubyte",
-               "data/mnist/train-labels-idx1-ubyte", 15);
-
-    for (int i=0; i<mnist.num_examples(); i++) {
-        cv::imshow("images_["+std::to_string(i)+"]: "+std::to_string(mnist.label(i)), mnist.image(i).exportMat());
-    }
-    while(cv::waitKey(0)!=27);
-}
 
 int
 main(int argc, const char *argv[])
@@ -302,9 +293,6 @@ main(int argc, const char *argv[])
 
 #if 0 && GRADIENT_CHECK
     gc_fullyconnected();
-#endif
-
-#if 0 && GRADIENT_CHECK
     gc_cnn_training();
 #endif
 

@@ -178,4 +178,4 @@ readPgmP5(std::string filename)
 }
 #endif
 
-#endif /* image.hpp */
+#endif /* IMAGE_HPP */

@@ -49,5 +49,4 @@ public:
 
 } /* namespace nn */
 
-#endif /* activation.hpp */
-
+#endif /* ACTIVATION_HPP */

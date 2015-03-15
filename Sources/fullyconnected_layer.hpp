@@ -92,4 +92,4 @@ private:
 
 } /* namespace nn */
 
-#endif
+#endif /* FULLYCONNECTED_LAYER_HPP */

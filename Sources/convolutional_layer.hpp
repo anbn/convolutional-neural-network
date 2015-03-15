@@ -149,4 +149,4 @@ private:
     
 } /* namespace nn */
 
-#endif
+#endif /* CONVOLUTIONAL_LAYER_HPP */

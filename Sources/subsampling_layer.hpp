@@ -99,4 +99,4 @@ private:
 
 } /* namespace nn */
 
-#endif
+#endif /* SUBSAMPLING_LAYER_HPP */

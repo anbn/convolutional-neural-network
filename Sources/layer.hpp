@@ -90,4 +90,4 @@ protected:
 
 } /* namespace nn */
 
-#endif
+#endif /* LAYER_HPP */

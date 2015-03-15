@@ -5,14 +5,12 @@
 
 #include "utils.hpp"
 #include "activation.hpp"
+
 #include "image.hpp"
-
 #include "mnist_reader.hpp"
-
 
 #define GRADIENT_CHECK  0
 #define VERBOSE         0
-
 
 namespace my_nn {
 
@@ -28,18 +26,33 @@ public:
     const vec_t& weights() const { return weights_; }
     const vec_t& bias() const { return bias_; }
 
+    layer* next_layer() const { return next_layer_; }
+    layer* prev_layer() const { return prev_layer_; }
+
     void resetWeights() {
         randomize(std::begin(weights_), std::end(weights_), -.5, .5);
         randomize(std::begin(bias_), std::end(bias_), -0.1, 0.1);
     }
 
+    void set_next_layer(layer* next_layer) { 
+        assert(next_layer!=nullptr);
+        assert(out_dim_ == next_layer->in_dim());
+        next_layer->set_prev_layer( this );
+        next_layer_ = next_layer;
+    }
+    void set_prev_layer(layer* prev_layer){
+        assert(prev_layer!=nullptr);
+        
+        prev_layer_ = prev_layer;
+    }
+    
     void set_learningrate(float_t l) {
         learning_rate = l;
     }
 
     virtual float_t in_delta_sum(uint_t fm, uint_t ix, uint_t iy) const = 0;
     virtual void forward(const vec_t& in) = 0;
-    virtual void backward(const vec_t& in, const layer& next_layer) = 0;
+    virtual void backward(const vec_t& in) = 0;
 
 #if GRADIENT_CHECK
     vec_t gc_gradient_weights_,
@@ -76,6 +89,9 @@ protected:
     vec_t bias_;        /* [feature_map] */
 
     vec_t output_;      /* [feature_maps * out_dim_ * out_dim_] */
+
+    layer* next_layer_ = nullptr;
+    layer* prev_layer_ = nullptr;
 
     float_t learning_rate = 0.0001;
 };
@@ -129,22 +145,21 @@ public:
         return sum;
     }
 
-    /* backpropagation for any layer except the last one */
-    void backward(const vec_t& in, const layer& next_layer) {
+    /* backpropagation for any layer */
+    void backward(const vec_t& in) {
 #if VERBOSE
         std::cout<<"(backwardfully) ";
 #endif
 
         assert(in.size()==in_dim_);
-        assert(next_layer.in_dim()==out_dim_);
 
         for (uint_t o=0; o<out_dim_; o++) {
 
-            //if (soll_!=nullptr) { /* is the last layer */
-            //    delta_[o] = (output_[o]-(*soll_)[o]) * A_.df(output_[o]); 
-            //} else {               /* not the last layer */
-                delta_[o] = A_.df(output_[o]) * next_layer.in_delta_sum(o,0,0);
-            //}
+            if (next_layer_==nullptr) { /* is the last layer */
+                delta_[o] = (output_[o]-(*soll_)[o]) * A_.df(output_[o]); 
+            } else {               /* not the last layer */
+                delta_[o] = A_.df(output_[o]) * next_layer_->in_delta_sum(o,0,0);
+            }
             for (uint_t i=0; i<in_dim_; i++) {
 #if GRADIENT_CHECK
                 gc_gradient_weights_[o*in_dim_ + i] = delta_[o] * in[i]; 
@@ -160,34 +175,6 @@ public:
         }
     } 
 
-    
-    /* backpropagation for the last layer */
-    void backward(const layer& previous_layer, const vec_t& soll) {
-#if VERBOSE
-        std::cout<<"(backwardfullylast) ";
-#endif
-        assert(previous_layer.out_dim()==in_dim_);
-        assert(soll.size()==out_dim_);
-
-        for (uint_t o=0; o<out_dim_; o++) {
-
-            delta_[o] = (output_[o]-soll[o]) * A_.df(output_[o]);
-
-            for (uint_t i=0; i<in_dim_; i++) {
-#if GRADIENT_CHECK
-                gc_gradient_weights_[o*in_dim_ + i] = delta_[o]*previous_layer.output()[i]; 
-#else
-                weights_[o*in_dim_ + i] -= learning_rate * delta_[o] * previous_layer.output()[i];
-#endif
-            }
-#if GRADIENT_CHECK
-            gc_gradient_bias_[o] = delta_[o] * 1.0;
-#else
-            bias_[o] -= learning_rate * delta_[o] * 1.0;
-#endif
-        } 
-    }
-
     void set_soll( const vec_t* soll ) {
         soll_ = soll;
     }
@@ -195,7 +182,7 @@ public:
     ActivationFunction A_;
 
 private:
-    vec_t* soll_ = nullptr;
+    const vec_t* soll_ = nullptr;
 };
 
 
@@ -284,12 +271,11 @@ public:
     }
     
     /* convolutional_layer */
-    void backward(const vec_t& in, const layer& next_layer) {
+    void backward(const vec_t& in) {
 #if VERBOSE
         std::cout<<"(backwardconv) ";
 #endif
         assert(in.size()==in_feature_maps_ * in_width_ * in_width_);
-        assert(next_layer.in_dim()==out_dim_);
         assert(weights_.size() == in_feature_maps_*out_feature_maps_*filter_width_*filter_width_);
 
 
@@ -299,7 +285,7 @@ public:
             for (uint_t ox=0; ox<out_width_; ox++) {
                 for (uint_t oy=0; oy<out_width_; oy++) {
                     uint_t out_index = (out_fm*out_width_+ ox)*out_width_ + oy;
-                    delta_[out_index] = A_.df(output_[out_index]) * next_layer.in_delta_sum(out_fm, ox, oy);
+                    delta_[out_index] = A_.df(output_[out_index]) * next_layer_->in_delta_sum(out_fm, ox, oy);
                     sum_delta += delta_[out_index];
                 }
             }
@@ -393,12 +379,11 @@ public:
         return delta_[(fm*out_width_ + ix/2)*out_width_ + iy/2] * weights_[fm];
     }
     
-    void backward(const vec_t& in, const layer& next_layer) {
+    void backward(const vec_t& in) {
 #if VERBOSE
         std::cout<<"(backwardsub) ";
 #endif
         assert(in.size()==in_dim_);
-        assert(next_layer.in_dim()==out_dim_);
 
         for (uint_t fm=0; fm<feature_maps_; fm++) {
 
@@ -408,7 +393,7 @@ public:
                 for (uint_t oy=0; oy<out_width_; oy++) {
 
                     const uint_t out_index = (fm*out_width_+ ox)*out_width_ + oy;
-                    delta_[out_index] = A_.df(output_[out_index]) * next_layer.in_delta_sum(fm,ox,oy);
+                    delta_[out_index] = A_.df(output_[out_index]) * next_layer_->in_delta_sum(fm,ox,oy);
                     sum_delta += delta_[out_index]; 
                     
                     float_t sum_block = 0.0;
@@ -441,54 +426,137 @@ private:
 };
 
 
-//template<typename ActivationFunction>
+template<typename ActivationFunction>
 class neural_network {
 
 public:
     
-    uint_t in_dim() const { assert(!layers_.empty()); return layers_.front()->in_dim(); }
-    uint_t out_dim() const { assert(!layers_.empty()); return layers_.back()->out_dim(); }
+    uint_t in_dim() const { assert(first_layer_!=nullptr); return first_layer_->in_dim(); }
+    uint_t out_dim() const { assert(last_layer_!=nullptr); return last_layer_->out_dim(); }
 
-    const vec_t& output() const { assert(!layers_.empty()); return layers_.back()->output(); };
+    const vec_t& output() const {
+        assert(last_layer_!=nullptr);
+        return last_layer_->output();
+    }
 
-    void set_learningrate(float_t lr) {
-        for (auto& l : layers_) {
-            l->set_learningrate(lr);
-        }
+    void set_learningrate(float_t learning_rate) {
+        assert(first_layer_!=nullptr);
+
+        layer* l = first_layer_;
+        do {
+            l->set_learningrate(learning_rate);
+            l = l->next_layer();
+        } while(l!=nullptr); 
     }
     
     void add_layer(layer* l) {
-        assert(layers_.empty() || layers_.back()->out_dim() == l->in_dim());
-        layers_.push_back(l);
+        assert(l!=nullptr);
+
+        if (last_layer_==nullptr) {
+            first_layer_ = l;
+        } else {
+            last_layer_->set_next_layer(l);
+        }
+        last_layer_ = l;
+    }
+
+    float_t squared_error(const vec_t& soll) {
+        fullyconnected_layer<ActivationFunction> *last = dynamic_cast<fullyconnected_layer<ActivationFunction>*>(last_layer_);
+        assert(last != nullptr);
+        return last->squared_error(soll);
     }
 
     void forward(const vec_t& in) {
-    
-        assert(!layers_.empty());
+        
+        assert(first_layer_!=nullptr);
 
-        const vec_t *input = &in;
-        for (auto& l : layers_) {
+        layer* l = first_layer_;
+        const vec_t* input = &in;
+
+        do {
             l->forward(*input);
             input = &l->output();
+            l = l->next_layer();
+        } while(l!=nullptr); 
+    }
+
+    void backward(const vec_t& in, const vec_t& soll) {
+       
+        fullyconnected_layer<ActivationFunction> *last = dynamic_cast<fullyconnected_layer<ActivationFunction>*>(last_layer_);
+        assert(last != nullptr);
+
+        last->set_soll(&soll);
+        
+        layer* l = last_layer_;
+
+        do {
+            l->backward(l->prev_layer()==nullptr? in : l->prev_layer()->output());
+            l = l->prev_layer();
+        } while(l!=nullptr);
+    }
+
+# if GRADIENT_CHECK
+    void gc_check_weights(const vec_t& in, const vec_t& soll, layer* gc_layer) {
+       
+        const my_nn::float_t gc_epsilon = 0.00001;
+        
+        for (int w=0; w<gc_layer->weights().size(); w++) {
+
+            float_t weight = gc_layer->get_weight(w);
+
+            gc_layer->set_weight(w, weight+gc_epsilon);
+            this->forward(in);
+            float_t errorp = this->squared_error(soll);
+
+            gc_layer->set_weight(w, weight-gc_epsilon);
+            this->forward(in);
+            float_t errorm = this->squared_error(soll);
+
+            gc_layer->set_weight(w, weight);
+            this->forward(in);
+            this->backward(in, soll);
+            float_t gradient = gc_layer->gc_gradient_weights(w);
+
+            float_t q = (errorp-errorm)/(4.0*gc_epsilon);
+            float_t d = fabs(q - gradient);
+            std::cout <<"FD - dE/d["<< w <<"]="<< q <<" - "<< gradient <<" = " << d <<"\n";
+            assert( d < 0.000001 );
         }
     }
 
-    /*void backward(const vec_t& in, const vec_t& soll) {
-        auto iter = layers_.rbegin();
+    void gc_check_bias(const vec_t& in, const vec_t& soll, layer* gc_layer) {
        
-        fullyconnected_layer<ActivationFunction> &last =
-                dynamic_cast<fullyconnected_layer<ActivationFunction>>(*iter);
-        last.set_soll(&soll);
-        while(iter!= layers_.rend()) {
+        const my_nn::float_t gc_epsilon = 0.00001;
+        
+        for (int w=0; w<gc_layer->bias().size(); w++) {
 
-            ++iter;
-        } 
-    }*/
+            float_t bias = gc_layer->get_bias(w);
+
+            gc_layer->set_bias(w, bias+gc_epsilon);
+            this->forward(in);
+            float_t errorp = this->squared_error(soll);
+
+            gc_layer->set_bias(w, bias-gc_epsilon);
+            this->forward(in);
+            float_t errorm = this->squared_error(soll);
+
+            gc_layer->set_bias(w, bias);
+            this->forward(in);
+            this->backward(in, soll);
+            float_t gradient = gc_layer->gc_gradient_bias(w);
+
+            float_t q = (errorp-errorm)/(4.0*gc_epsilon);
+            float_t d = fabs(q - gradient);
+            std::cout <<"FD - dE/d["<< w <<"]="<< q <<" - "<< gradient <<" = " << d <<"\n";
+            assert( d < 0.000001 );
+        }
+    }
+#endif
 
 private:
 
-
-    std::list<layer*> layers_;
+    layer *first_layer_ = nullptr;
+    layer *last_layer_ = nullptr;
 };
 
 

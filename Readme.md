@@ -1,10 +1,7 @@
 # Todo
 
-* refactor
-* backward network
-
 ## Nice to hace
 
-* stochastic GD
+* Stochastic GD
 * Adadelta
 * Hessian training

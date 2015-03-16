@@ -15,7 +15,9 @@ public:
             in_width_(in_width), out_width_(out_width),
             filter_width_(in_width-out_width+1)
     {
-        std::cout<<"DEBUG: convolutional_layer(" <<in_width<<","<<out_width<<","<<in_feature_maps<<","<<out_feature_maps_<<")\n";
+        assert(in_width_>=out_width_);
+
+        std::cout<<"DEBUG: convolutional_layer(" <<in_width_<<","<<out_width_<<","<<in_feature_maps_<<","<<out_feature_maps_<<") filter_width:"<<filter_width_<<"\n";
         connected_.resize(in_feature_maps_*out_feature_maps);
         std::fill(std::begin(connected_), std::end(connected_), true);
     }

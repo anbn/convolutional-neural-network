@@ -61,15 +61,38 @@ public:
         height_ = h;
     }
 
+    void subsample(float_t scale) {
+        assert(scale==0.5);
+
+        uint_t w = width_*0.5;
+        uint_t h = height_*0.5;
+
+        std::vector<T> new_data(w*h);
+
+        for (int x=0; x<w; x++) {
+            for (int y=0; y<h; y++) {
+                new_data[y * w + x] =
+                        (data_[(2*y  ) * width_ + (2*x  )] +
+                         data_[(2*y+1) * width_ + (2*x  )] + 
+                         data_[(2*y  ) * width_ + (2*x+1)] + 
+                         data_[(2*y+1) * width_ + (2*x+1)]) * 0.25;
+            }
+        }
+        data_ = std::move(new_data);
+        width_ = w;
+        height_ = h;
+    }
+
+
     T& at(uint_t x, uint_t y) const {
         assert(x < width_ && y < height_);
         return data_[y * width_ + x];
     }
 
-    Image<float> convolution(uint_t kernel_size, std::vector<float> kernel ) {
+    Image<float_t> convolution(uint_t kernel_size, std::vector<float_t> kernel ) {
         
-        Image<float> result(width_, height_);
-        float sum;
+        Image<float_t> result(width_, height_);
+        float_t sum;
 
         assert( (kernel_size%2==1) && kernel.size()==(kernel_size*kernel_size));
 
@@ -117,26 +140,6 @@ public:
 
         return Image<intensity_t>(width_, height_, std::begin(data), std::end(data));
     }
-
-    /*Image<intensity_t> toIntensity() {
-        auto pair_minmax = std::minmax_element(std::begin(this->data_), std::end(this->data_));
-        return toIntensity(*pair_minmax.first, *pair_minmax.second);
-    }*/
-
-    /*void rescale(T newmin, T newmax) {
-        auto pair_minmax = std::minmax_element(std::begin(this->data_), std::end(this->data_));
-        std::cout<<"MINMAX: "<<*pair_minmax.first<<" and "<<*pair_minmax.second<<"\n";
-        std::cout<<"MINMAX: "<<newmin<<" and "<<newmax<<"\n";
-        //exit(0);
-        for (int w=0; w<width_; w++) {
-            for (int h=0; h<height_; h++) {
-                //std::cout<<data_[h*width_+w]<<" ";
-                data_[h*width_+w] = (((data_[h*width_+w]-*pair_minmax.first)/(*pair_minmax.second-*pair_minmax.first)) * (newmax-newmin)+newmin);
-                //std::cout<<data_[h*width_+w]<<" \n";
-            }
-        }
-    }*/
-
 
     void importMat(cv::Mat img) {
         this->resize(img.cols, img.rows);

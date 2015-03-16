@@ -61,7 +61,8 @@ public:
 
                 int idx = f*40+n;
                 images_[idx] = Image<float_t>(width, height, data);
-                images_[idx].crop(6,30,80,80);
+                images_[idx].crop(14,38,64,64);
+                images_[idx].subsample(0.5);
                 labels_[idx] = 1;
 
                 ++num_examples_;
@@ -86,6 +87,7 @@ void orl_reader_test() {
 
     for (int i=0; i<orl.num_examples(); i++) {
         Image<nn::float_t> img = orl.image(i);
+        std::cout<<"orl["<<i<<"]: "<<img.width()<<"x"<<img.height()<<"\n";
         cv::imshow("orl["+std::to_string(i)+"]", img.toIntensity(0,1).exportMat());
         while(cv::waitKey(0)!=27);
     }

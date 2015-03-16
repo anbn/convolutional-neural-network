@@ -25,7 +25,7 @@ public:
 //    
 //    }
     
-    bool read(std::string filename_images, std::string filename_labels, uint_t num) {
+    bool read(std::string path, uint_t num) {
         std::cout<<"Reading mnist... ";
         
         if (num == 0 || num > 60000) {
@@ -36,11 +36,11 @@ public:
         images_.resize(num);
         labels_.resize(num);
 
-        std::ifstream file_images(filename_images, std::ios::in|std::ios::binary);
-        std::ifstream file_labels(filename_labels, std::ios::in|std::ios::binary);
+        std::ifstream file_images(path+"/train-images-idx3-ubyte", std::ios::in|std::ios::binary);
+        std::ifstream file_labels(path+"/train-labels-idx1-ubyte", std::ios::in|std::ios::binary);
 
         if (!file_images.is_open() || !file_labels.is_open()) {
-            std::cout<<"\nError reading mnist files ("<<filename_images<<", "<<filename_labels<<")\n";
+            std::cout<<"\nError reading mnist files ("<<path<<"/train-images-idx3-ubyte and "<<path<<"/)\n";
             file_images.close();
             file_labels.close();
             return false;
@@ -76,25 +76,18 @@ public:
             file_labels.read(reinterpret_cast<char*>(&label), sizeof(unsigned char));
             for (uint_t i=0; i<rows*columns; i++) {
                 file_images.read(reinterpret_cast<char*>(&byte), sizeof(unsigned char));
-                data[i] = (byte / 128.0)-1;
+                data[i] = (byte / 128.0)-1; /* scale to [-1,1] */
             }
             images_[n] = Image<float_t>(columns, rows, std::begin(data), std::end(data));
             labels_[n] = label;
             ++num_examples_;
         }
 
-
         file_images.close();
         file_labels.close();
 
-
         std::cout<<"done. ("<<num_examples_<<" images read)\n";
         return true;
-    }
-
-    void corrupt(uint_t n) 
-    {
-        images_[n].fill(0);
     }
 
 protected:
@@ -109,13 +102,13 @@ protected:
 
 void mnist_reader_test() {
     mnist_reader mnist;
-    mnist.read("data/mnist/train-images-idx3-ubyte",
-               "data/mnist/train-labels-idx1-ubyte", 15);
+    mnist.read("data/mnist/", 15);
 
     for (int i=0; i<mnist.num_examples(); i++) {
-        cv::imshow("images_["+std::to_string(i)+"]: "+std::to_string(mnist.label(i)), mnist.image(i).exportMat());
+        Image<nn::float_t> img = mnist.image(i);
+        cv::imshow("mnist["+std::to_string(i)+"]: "+std::to_string(mnist.label(i)), img.toIntensity(-1,1).exportMat());
+        while(cv::waitKey(0)!=27);
     }
-    while(cv::waitKey(0)!=27);
 }
 
 

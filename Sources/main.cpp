@@ -13,6 +13,7 @@
 #include "network.hpp"
 #include "image.hpp"
 #include "mnist_reader.hpp"
+#include "orl_reader.hpp"
 
 using namespace nn;
 
@@ -147,7 +148,6 @@ gc_cnn_training()
     std::cout<<"- C1 bias ----------------------\n";
     nn.gc_check_bias(mnist.image(num_example).data(), soll, &C1);
 }
-
 #endif
 
 void
@@ -204,8 +204,7 @@ cnn_training_test()
 {
     const int steps = 100000;
     mnist_reader mnist;
-    mnist.read( "data/mnist/train-images-idx3-ubyte",
-                "data/mnist/train-labels-idx1-ubyte", std::min(steps, 0));
+    mnist.read("data/mnist/", std::min(steps, 0));
 
     neural_network<tan_h> nn;
     convolutional_layer<tan_h>  C1(28 /* in_width*/, 24 /* out_width*/, 1 /*in_fm*/,   6 /*out_fm*/);
@@ -246,9 +245,9 @@ cnn_training_test()
 
         nn.forward(mnist.image(num_example).data());
         
-        soll[last_label] = -1.0;
+        soll[last_label] = -0.8;
         last_label = mnist.label(num_example);
-        soll[last_label] = 1.0;
+        soll[last_label] =  0.8;
 
         nn::float_t error = nn.squared_error(soll);
         std::cout<<"Step: "<<s<<"\n";
@@ -258,7 +257,7 @@ cnn_training_test()
 
         nn.backward(mnist.image(num_example).data(), soll);
 
-        if ( s%10000 < 50 ) {
+        if ( s%30000 < 50 ) {
 
             Image<nn::float_t> img_in(28, 1*28, std::begin(mnist.image(num_example).data()), std::end(mnist.image(num_example).data()));
             Image<nn::float_t> img_c1(24, 6*24, std::begin(C1.output()), std::end(C1.output()));
@@ -291,23 +290,16 @@ int
 main(int argc, const char *argv[])
 {
 
-#if 0 && GRADIENT_CHECK
-    gc_fullyconnected();
-    gc_cnn_training();
+#if GRADIENT_CHECK
+    //gc_fullyconnected();
+    //gc_cnn_training();
 #endif
 
-#if 0
-    fullyconnected_test();
-#endif
-    
-#if 1
-    cnn_training_test();
-#endif
+    //fullyconnected_test();
+    //cnn_training_test();
 
-#if 0
-    mnist_reader_test();
-#endif
+    orl_reader_test();
+    //mnist_reader_test();
     
     return 0;
 }
-

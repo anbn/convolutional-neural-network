@@ -2,6 +2,8 @@
 #define IMAGE_HPP
 
 typedef unsigned char intensity_t;
+typedef unsigned int uint_t;
+
 
 template <typename T = intensity_t>
 class Image {
@@ -9,21 +11,32 @@ class Image {
 public:
 
     Image() : width_(0), height_(0) {}
-    Image(size_t width, size_t height) : width_(width), height_(height), data_(width * height, 0) {}
+    Image(uint_t width, uint_t height)
+        : width_(width), height_(height),
+        data_(width * height, 0)
+    {}
    
-    template <typename AccessIterator>
-    Image(size_t width, size_t height, AccessIterator iter_begin, AccessIterator iter_end)
-        : width_(width), height_(height), data_(width * height, 0) {
+    Image(uint_t width, uint_t height, std::vector<T> data)
+        : width_(width), height_(height)
+    {
+        data_.resize(width_*height_);
+        std::copy(std::begin(data), std::end(data), std::begin(data_));
+    }
 
+    template <typename AccessIterator>
+    Image(uint_t width, uint_t height, AccessIterator iter_begin, AccessIterator iter_end)
+        : width_(width), height_(height),
+        data_(width * height, 0)
+    {
+        data_.resize(width_*height_);
         std::copy(iter_begin, iter_end, std::begin(data_));
     }
 
-    size_t width() const { return width_; }
-    size_t height() const { return height_; }
+    uint_t width() const { return width_; }
+    uint_t height() const { return height_; }
     const std::vector<T>& data() const { return data_; }
 
-
-    void resize(size_t width, size_t height) {
+    void resize(uint_t width, uint_t height) {
         data_.resize(width * height);
         width_ = width;
         height_ = height;
@@ -33,13 +46,27 @@ public:
         std::fill(data_.begin(), data_.end(), value);
     }
 
-    T& at(size_t x, size_t y) {
-        assert(x < width_);
-        assert(y < height_);
+    void crop(uint_t x, uint_t y, uint_t w, uint_t h) {
+        assert((x+w < width_) && (y+h < height_));
+        
+        std::vector<T> new_data(w*h);
+
+        for (int nx=0; nx<w; nx++) {
+            for (int ny=0; ny<h; ny++) {
+                new_data[ny * w + nx] = data_[(y+ny) * width_ + (x+nx)];
+            }
+        }
+        data_ = std::move(new_data);
+        width_ = w;
+        height_ = h;
+    }
+
+    T& at(uint_t x, uint_t y) const {
+        assert(x < width_ && y < height_);
         return data_[y * width_ + x];
     }
 
-    Image<float> convolution(size_t kernel_size, std::vector<float> kernel ) {
+    Image<float> convolution(uint_t kernel_size, std::vector<float> kernel ) {
         
         Image<float> result(width_, height_);
         float sum;
@@ -135,47 +162,10 @@ public:
     
 private:
 
-    size_t width_;
-    size_t height_;
+    uint_t width_;
+    uint_t height_;
     std::vector<T> data_;
 
 };
-
-
-#if 0
-Image<intensity_t>
-readPgmP5(std::string filename)
-{
-    Image<intensity_t> result;
-    std::ifstream infile;
-    std::string s;
-    int width, height;
-    char a;
-    
-    infile.open(filename, std::ios::binary | std::ios::in);
-    if(!infile.is_open())
-        throw "Error opening file.";
-
-    std::getline(infile, s);
-    if (s.compare("P5"))
-        throw "P5 Format required";
-
-    std::getline(infile, s);
-    width = std::stoi(s.substr(0, s.find(" ")));
-    height = std::stoi(s.substr(s.find(" ")));
-    result.resize(width,height);
-    
-    std::getline(infile, s);
-
-    for (int h=0; h<height; h++) {
-        for (int w=0; w<width; w++) {
-            infile.read(&a, 1);
-             result.data()[h*width+w] = a;
-        }
-    }
-    infile.close();
-    return result;
-}
-#endif
 
 #endif /* IMAGE_HPP */

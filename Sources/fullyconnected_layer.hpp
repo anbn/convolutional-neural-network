@@ -72,8 +72,9 @@ public:
                 uint_t idx = o*in_dim_+i;
                 float_t w = weights_[idx];
                 weights_[idx] = weights_[idx]
-                                - learning_rate * delta_[o] * in[i]
-                                + momentum * mom_weights_[idx];
+                                - learning_rate_ * delta_[o] * in[i]
+                                + momentum_ * mom_weights_[idx]
+                                - learning_rate_ * decay_ * weights_[idx];
                 mom_weights_[idx] = weights_[idx] - w;
 #endif
             }
@@ -82,8 +83,9 @@ public:
 #else
             float_t b = bias_[o];
             bias_[o] = bias_[o]
-                       - learning_rate * delta_[o]*1.0
-                       + momentum*mom_bias_[o];
+                       - learning_rate_ * delta_[o]*1.0
+                       + momentum_*mom_bias_[o];
+                       - learning_rate_ * decay_ * bias_[o];
             mom_bias_[o] = bias_[o] - b;
 #endif
         }

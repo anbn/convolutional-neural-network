@@ -194,7 +194,7 @@ fullyconnected_test()
         nn.backward(input, soll);
 
         moving_error = 0.9*moving_error + 0.1*error;
-        if(moving_error<0.1) exit(0);
+        if(moving_error<0.01) exit(0);
     }
 }
 
@@ -245,9 +245,9 @@ cnn_training_test_mnist()
 
         nn.forward(mnist.image(num_example).data());
         
-        soll[last_label] = -0.8;
+        soll[9-last_label] = -1;
         last_label = mnist.label(num_example);
-        soll[last_label] =  0.8;
+        soll[9-last_label] =  1;
 
         nn::float_t error = nn.squared_error(soll);
         std::cout<<"Step: "<<s<<"\n";

@@ -113,8 +113,9 @@ public:
 #else
             float_t b = bias_[out_fm];
             bias_[out_fm] = bias_[out_fm]
-                            - learning_rate * sum_delta
-                            + momentum * mom_bias_[out_fm];
+                            - learning_rate_ * sum_delta
+                            + momentum_ * mom_bias_[out_fm]
+                            - learning_rate_ * decay_ * bias_[out_fm];
             mom_bias_[out_fm] = bias_[out_fm] - b;
 #endif       
             for (uint_t in_fm=0; in_fm<in_feature_maps_; in_fm++) {
@@ -138,8 +139,9 @@ public:
                         uint_t idx = ((in_fm*out_feature_maps_ + out_fm)*filter_width_ + fx)*filter_width_ + fy;
                         float_t w = weights_[idx];
                         weights_[idx] = weights_[idx]
-                                        - learning_rate * sum
-                                        + momentum * mom_weights_[idx];
+                                        - learning_rate_ * sum
+                                        + momentum_ * mom_weights_[idx]
+                                        - learning_rate_ * decay_ * weights_[idx];
                         mom_weights_[idx] = weights_[idx] - w;
 #endif
                     }

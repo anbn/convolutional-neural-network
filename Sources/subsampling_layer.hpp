@@ -84,14 +84,16 @@ public:
 #else
             float_t w = weights_[fm];
             weights_[fm] = weights_[fm]
-                           - learning_rate*sum
-                           + momentum * mom_weights_[fm];
+                           - learning_rate_*sum
+                           + momentum_ * mom_weights_[fm]
+                           - learning_rate_ * decay_ * weights_[fm];
             mom_weights_[fm] = weights_[fm] - w;
 
             float_t b = bias_[fm];
             bias_[fm] = bias_[fm]
-                        - learning_rate * sum_delta
-                        + momentum * mom_bias_[fm];
+                        - learning_rate_ * sum_delta
+                        + momentum_ * mom_bias_[fm]
+                        - learning_rate_ * decay_ * bias_[fm];
             mom_bias_[fm] = bias_[fm] - b;
 #endif
         }

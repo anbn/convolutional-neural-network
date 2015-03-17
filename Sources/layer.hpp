@@ -33,12 +33,16 @@ public:
     }
     void set_prev_layer(layer* prev_layer){
         assert(prev_layer!=nullptr);
-        
         prev_layer_ = prev_layer;
     }
     
-    void set_learningrate(float_t v) { learning_rate = v; }
-    void set_momentum(float_t v) { momentum = v; }
+    void set_learningrate(float_t v) { learning_rate_ = v; }
+    void set_momentum(float_t v) { momentum_ = v; }
+    void set_decay(float_t v) { decay_ = v; }
+
+    float_t learningrate() { return learning_rate_; }
+    float_t momentum() { return momentum_; }
+    float_t decay() { return decay_; }
 
     virtual float_t in_delta_sum(uint_t fm, uint_t ix, uint_t iy) const = 0;
     virtual void forward(const vec_t& in) = 0;
@@ -77,8 +81,8 @@ protected:
     uint_t out_dim_;
 
     vec_t weights_;     /* variable size, depending on layer type */
-    vec_t delta_;       /* [out_dim_] */
     vec_t bias_;        /* [feature_map] */
+    vec_t delta_;       /* [out_dim_] */
 
     vec_t mom_weights_;
     vec_t mom_bias_;
@@ -89,9 +93,9 @@ protected:
     layer* prev_layer_ = nullptr;
 
     /* learning parameters */
-    float_t learning_rate = 0.0001;
-    float_t momentum = 0.9;
-    //float_t decay = 0.0;
+    float_t learning_rate_ = 0.01;
+    float_t momentum_ = 0.9;
+    float_t decay_ = 0.001;
 };
 
 

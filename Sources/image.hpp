@@ -32,6 +32,18 @@ public:
         std::copy(iter_begin, iter_end, std::begin(data_));
     }
 
+    Image(cv::Mat img) {
+        this->resize(img.cols, img.rows);
+        for (int w=0; w<img.cols; w++) {
+            for (int h=0; h<img.rows; h++) {
+                data_[h * width_ + w] =
+                     0.114 * img.at<cv::Vec3b>(h, w)[0] +
+                     0.587 * img.at<cv::Vec3b>(h, w)[1] +
+                     0.299 * img.at<cv::Vec3b>(h, w)[2];
+            }
+        }
+    }
+    
     uint_t width() const { return width_; }
     uint_t height() const { return height_; }
     const std::vector<T>& data() const { return data_; }
@@ -84,7 +96,7 @@ public:
     }
 
 
-    T& at(uint_t x, uint_t y) const {
+    T at(uint_t x, uint_t y) const {
         assert(x < width_ && y < height_);
         return data_[y * width_ + x];
     }
@@ -141,18 +153,6 @@ public:
         return Image<intensity_t>(width_, height_, std::begin(data), std::end(data));
     }
 
-    void importMat(cv::Mat img) {
-        this->resize(img.cols, img.rows);
-        for (int w=0; w<img.cols; w++) {
-            for (int h=0; h<img.rows; h++) {
-                data_[h * width_ + w] =
-                     0.114 * img.at<cv::Vec3b>(h, w)[0] +
-                     0.587 * img.at<cv::Vec3b>(h, w)[1] +
-                     0.299 * img.at<cv::Vec3b>(h, w)[2];
-            }
-        }
-    }
-    
     cv::Mat exportMat() const {
         cv::Mat img(cv::Size(this->width_, this->height_),CV_8UC1);
         for (int w=0; w<img.cols; w++) {

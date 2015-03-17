@@ -35,7 +35,7 @@ class identity : activation {
 
 public:
     float_t f(float_t x) const { return x; }
-    float_t df(float_t f_x) const { return 1; }
+    float_t df(float_t f_x) const { return 1.0; }
 };
 
 

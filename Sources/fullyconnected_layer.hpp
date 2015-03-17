@@ -69,13 +69,22 @@ public:
 #if GRADIENT_CHECK
                 gc_gradient_weights_[o*in_dim_ + i] = delta_[o] * in[i]; 
 #else
-                weights_[o*in_dim_ + i] -= learning_rate * delta_[o] * in[i];
+                uint_t idx = o*in_dim_+i;
+                float_t w = weights_[idx];
+                weights_[idx] = weights_[idx]
+                                - learning_rate * delta_[o] * in[i]
+                                + momentum * mom_weights_[idx];
+                mom_weights_[idx] = weights_[idx] - w;
 #endif
             }
 #if GRADIENT_CHECK
             gc_gradient_bias_[o] = delta_[o] * 1.0;
 #else
-            bias_[o] -= learning_rate * delta_[o] * 1.0;
+            float_t b = bias_[o];
+            bias_[o] = bias_[o]
+                       - learning_rate * delta_[o]*1.0
+                       + momentum*mom_bias_[o];
+            mom_bias_[o] = bias_[o] - b;
 #endif
         }
     } 

@@ -21,8 +21,8 @@ public:
     layer* prev_layer() const { return prev_layer_; }
 
     void resetWeights() {
-        randomize(std::begin(weights_), std::end(weights_), -.5, .5);
-        randomize(std::begin(bias_), std::end(bias_), -0.1, 0.1);
+        randomize(std::begin(weights_), std::end(weights_), -0.5, .5);
+        randomize(std::begin(bias_), std::end(bias_), -0.0, 0.0);
     }
 
     void set_next_layer(layer* next_layer) { 
@@ -37,9 +37,8 @@ public:
         prev_layer_ = prev_layer;
     }
     
-    void set_learningrate(float_t l) {
-        learning_rate = l;
-    }
+    void set_learningrate(float_t v) { learning_rate = v; }
+    void set_momentum(float_t v) { momentum = v; }
 
     virtual float_t in_delta_sum(uint_t fm, uint_t ix, uint_t iy) const = 0;
     virtual void forward(const vec_t& in) = 0;
@@ -61,8 +60,10 @@ protected:
     
     layer(uint_t in_dim, uint_t out_dim, uint_t bias_dim, uint_t weights_dim) : in_dim_(in_dim), out_dim_(out_dim) {
         weights_.resize(weights_dim);
+        mom_weights_.resize(weights_dim);
         output_.resize(out_dim_);
         bias_.resize(bias_dim);
+        mom_bias_.resize(bias_dim);
         delta_.resize(out_dim_);
         resetWeights();
 #if GRADIENT_CHECK
@@ -79,12 +80,18 @@ protected:
     vec_t delta_;       /* [out_dim_] */
     vec_t bias_;        /* [feature_map] */
 
+    vec_t mom_weights_;
+    vec_t mom_bias_;
+
     vec_t output_;      /* [feature_maps * out_dim_ * out_dim_] */
 
     layer* next_layer_ = nullptr;
     layer* prev_layer_ = nullptr;
 
+    /* learning parameters */
     float_t learning_rate = 0.0001;
+    float_t momentum = 0.9;
+    //float_t decay = 0.0;
 };
 
 

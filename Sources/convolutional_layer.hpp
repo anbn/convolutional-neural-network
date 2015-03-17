@@ -111,7 +111,11 @@ public:
 #if GRADIENT_CHECK
             gc_gradient_bias_[out_fm] = sum_delta;
 #else
-            bias_[out_fm] -= learning_rate * sum_delta;
+            float_t b = bias_[out_fm];
+            bias_[out_fm] = bias_[out_fm]
+                            - learning_rate * sum_delta
+                            + momentum * mom_bias_[out_fm];
+            mom_bias_[out_fm] = bias_[out_fm] - b;
 #endif       
             for (uint_t in_fm=0; in_fm<in_feature_maps_; in_fm++) {
 
@@ -131,7 +135,12 @@ public:
 #if GRADIENT_CHECK
                         gc_gradient_weights_[((in_fm*out_feature_maps_ + out_fm)*filter_width_ + fx)*filter_width_ + fy] = sum;
 #else
-                        weights_[((in_fm*out_feature_maps_ + out_fm)*filter_width_ + fx)*filter_width_ + fy] -= learning_rate * sum;
+                        uint_t idx = ((in_fm*out_feature_maps_ + out_fm)*filter_width_ + fx)*filter_width_ + fy;
+                        float_t w = weights_[idx];
+                        weights_[idx] = weights_[idx]
+                                        - learning_rate * sum
+                                        + momentum * mom_weights_[idx];
+                        mom_weights_[idx] = weights_[idx] - w;
 #endif
                     }
                 }

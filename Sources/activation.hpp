@@ -31,6 +31,7 @@ public:
     float_t df(float_t f_x) const { return 1.0 - f_x * f_x; }
 };
 
+
 class identity : activation {
 
 public:
@@ -39,11 +40,10 @@ public:
 };
 
 
-
-class rel : activation {
+class relu : activation {
 
 public:
-    float_t f(float_t x) const { return std::max(0.0, x); }
+    float_t f(float_t x) const { return x < 0 ? 0 : x; }
     float_t df(float_t f_x) const { return f_x > 0.0 ? 1.0 : 0.0; }
 };
 

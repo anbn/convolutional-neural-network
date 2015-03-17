@@ -233,7 +233,7 @@ cnn_training_test_mnist()
     nn.add_layer(&C5);
     nn.add_layer(&O6);
     
-    nn.set_learningrate(1.0/(10000));
+    nn.set_learningrate(1.0/(100000));
     
     vec_t soll {-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8};
     int last_label = 0;
@@ -257,7 +257,7 @@ cnn_training_test_mnist()
 
         nn.backward(mnist.image(num_example).data(), soll);
 
-        if ( s%30000 < 50 ) {
+        if ( s%10000 < 50 ) {
 
             Image<nn::float_t> img_in(28, 1*28, std::begin(mnist.image(num_example).data()), std::end(mnist.image(num_example).data()));
             Image<nn::float_t> img_c1(24, 6*24, std::begin(C1.output()), std::end(C1.output()));
@@ -295,25 +295,23 @@ cnn_training_test_orl()
     orl.generate_counterexamples(600, 32, "data/misc/saopaulo.jpg");
 
     neural_network<tan_h> nn;
-    convolutional_layer<tan_h>  C1(32 /* in_width*/, 30 /* out_width*/, 1 /*in_fm*/,   6 /*out_fm*/);
-    subsampling_layer<tan_h>    S2(30 /* in_width*/, 15 /* out_width*/, 6 /*fm*/,      2 /*block_size*/);
-    convolutional_layer<tan_h>  C3(15 /* in_width*/, 12 /* out_width*/, 6 /*in_fm*/,  16 /*out_fm*/);
+    convolutional_layer<tan_h>  C1(32 /* in_width*/, 28 /* out_width*/, 1 /*in_fm*/,   2 /*out_fm*/);
+    subsampling_layer<tan_h>    S2(28 /* in_width*/, 14 /* out_width*/, 2 /*fm*/,      2 /*block_size*/);
+    convolutional_layer<tan_h>  C3(14 /* in_width*/, 12 /* out_width*/, 2 /*in_fm*/,   5 /*out_fm*/);
+
 #define _ false
 #define X true
     const bool connection[] = {
-        X, _, _, _, X, X, X, _, _, X, X, X, X, _, X, X,
-        X, X, _, _, _, X, X, X, _, _, X, X, X, X, _, X,
-        X, X, X, _, _, _, X, X, X, _, _, X, _, X, X, X,
-        _, X, X, X, _, _, X, X, X, X, _, _, X, _, X, X,
-        _, _, X, X, X, _, _, X, X, X, X, _, X, X, _, X,
-        _, _, _, X, X, X, _, _, X, X, X, X, _, X, X, X
+        X, X, _, _, X, 
+        _, _, X, X, X, 
     };
 #undef _
 #undef X
-    C3.set_connection(connection, 6*16);
-    subsampling_layer<tan_h>    S4(12 /* in_width*/,  6 /* out_width*/, 16 /*fm*/,     2 /*block_size*/);
-    convolutional_layer<tan_h>  C5( 6 /* in_width*/,  1 /* out_width*/, 16 /*in_fm*/, 32 /*out_fm*/);
-    fullyconnected_layer<tan_h> O6(32 /* in_width*/,  1 /* out_width*/);
+    C3.set_connection(connection, 2*5);
+
+    subsampling_layer<tan_h>    S4(12 /* in_width*/,  6 /* out_width*/, 5 /*fm*/,     2 /*block_size*/);
+    convolutional_layer<tan_h>  C5( 6 /* in_width*/,  1 /* out_width*/, 5 /*in_fm*/,  5 /*out_fm*/);
+    fullyconnected_layer<tan_h> O6( 5 /* in_width*/,  1 /* out_width*/);
     nn.add_layer(&C1);
     nn.add_layer(&S2);
     nn.add_layer(&C3);
@@ -345,11 +343,11 @@ cnn_training_test_orl()
         if ( s%10000 < 50 ) {
 
             Image<nn::float_t> img_in(32, 1*32, std::begin(orl.image(num_example).data()), std::end(orl.image(num_example).data()));
-            Image<nn::float_t> img_c1(30, 6*30, std::begin(C1.output()), std::end(C1.output()));
-            Image<nn::float_t> img_s2(15, 6*15, std::begin(S2.output()), std::end(S2.output()));
-            Image<nn::float_t> img_c3(12,16*12, std::begin(C3.output()), std::end(C3.output()));
-            Image<nn::float_t> img_s4( 6, 16*6, std::begin(S4.output()), std::end(S4.output()));
-            Image<nn::float_t> img_c5( 1,   32, std::begin(C5.output()), std::end(C5.output()));
+            Image<nn::float_t> img_c1(28, 2*28, std::begin(C1.output()), std::end(C1.output()));
+            Image<nn::float_t> img_s2(14, 2*14, std::begin(S2.output()), std::end(S2.output()));
+            Image<nn::float_t> img_c3(12, 5*12, std::begin(C3.output()), std::end(C3.output()));
+            Image<nn::float_t> img_s4( 6,  5*6, std::begin(S4.output()), std::end(S4.output()));
+            Image<nn::float_t> img_c5( 1,    5, std::begin(C5.output()), std::end(C5.output()));
             Image<nn::float_t> img_o6( 1,    1, std::begin(O6.output()), std::end(O6.output()));
             /* soll */
             Image<nn::float_t> img_so( 1,    1, std::begin(soll), std::end(soll));
@@ -379,8 +377,8 @@ main(int argc, const char *argv[])
 #endif
 
     //fullyconnected_test();
-    //cnn_training_test_mnist();
-    cnn_training_test_orl();
+    cnn_training_test_mnist();
+    //cnn_training_test_orl();
 
     //orl_reader_test();
     //mnist_reader_test();

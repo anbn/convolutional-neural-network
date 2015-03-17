@@ -43,7 +43,7 @@ public:
 class relu : activation {
 
 public:
-    float_t f(float_t x) const { return x < 0 ? 0 : x; }
+    float_t f(float_t x) const { return x < 0.0 ? 0.0 : x; }
     float_t df(float_t f_x) const { return f_x > 0.0 ? 1.0 : 0.0; }
 };
 

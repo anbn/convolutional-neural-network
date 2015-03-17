@@ -1,11 +1,10 @@
 # Todo
 
+* softmax layers
+
 ## Nice to hace
 
-* Batch Training
-* Momentum
 * Adadelta
-* Hessian training
 * Levenberg-Marquardt
 
 ## Resources

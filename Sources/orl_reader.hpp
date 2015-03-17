@@ -73,6 +73,8 @@ public:
 
     bool generate_counterexamples(uint_t num, uint_t dim, std::string filename) {
         Image<float_t> img (cv::imread(filename));
+        //cv::imshow("test",img.exportMat());
+        std::cout<<"Generating counterexmaples... ";
 
         for (int n=0; n<num; n++) {
             int x = randomize(0.0, (double)(img.width()-dim));
@@ -85,8 +87,9 @@ public:
                 }
             }
             images_.push_back(Image<float_t>(dim, dim, data));
-            labels_.push_back(0);
+            labels_.push_back(-1);
         }
+        std::cout<<"("<<num_examples()<<" images read)\n";
     }
 
 
@@ -100,7 +103,7 @@ void orl_reader_test() {
     orl_reader orl;
 
     orl.read("data/orl_faces", 10);
-    orl.generate_counterexamples(10, 32, "data/misc/hammock.jpg");
+    orl.generate_counterexamples(10, 100, "data/misc/saopaulo.jpg");
     
 
     for (int i=0; i<orl.num_examples(); i++) {

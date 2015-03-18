@@ -1,6 +1,9 @@
 #ifndef IMAGE_HPP
 #define IMAGE_HPP
 
+
+#include <algorithm> /* for std::minmax */
+
 typedef unsigned char intensity_t;
 typedef unsigned int uint_t;
 
@@ -152,6 +155,11 @@ public:
 
         return Image<intensity_t>(width_, height_, std::begin(data), std::end(data));
     }
+
+//    Image<intensity_t> toIntensity() {
+//        auto mm = std::minmax(std::begin(data_), std::end(data_));
+//        return toIntensity(mm.first, mm.second);
+//    }
 
     cv::Mat exportMat() const {
         cv::Mat img(cv::Size(this->width_, this->height_),CV_8UC1);

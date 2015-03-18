@@ -27,6 +27,9 @@ public:
 
     void set_next_layer(layer* next_layer) { 
         assert(next_layer!=nullptr);
+#if VERBOSE
+        std::cout<<"set_next_layer(...): "<<out_dim_<<"=="<<next_layer->in_dim()<<"\n";
+#endif
         assert(out_dim_ == next_layer->in_dim());
         next_layer->set_prev_layer( this );
         next_layer_ = next_layer;

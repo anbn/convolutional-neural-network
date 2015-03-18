@@ -69,7 +69,6 @@ public:
     void backward(const vec_t& in, const vec_t& soll) {
        
         output_layer *last = dynamic_cast<output_layer*>(last_layer_);
-        
         assert(last != nullptr);
 
         last->set_soll(&soll);

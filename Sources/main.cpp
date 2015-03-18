@@ -34,7 +34,7 @@ gc_fullyconnected()
     std::cout.setf(std::ios::fixed, std::ios::floatfield);
     std::cout.precision(16);
 
-    neural_network<sigmoid> nn;
+    neural_network nn;
     fullyconnected_layer<sigmoid> L1(4,8);
     fullyconnected_layer<sigmoid> L2(8,6);
     fullyconnected_layer<sigmoid> L3(6,4);
@@ -72,7 +72,7 @@ gc_cnn_training()
     std::cout.setf(std::ios::fixed, std::ios::floatfield);
     std::cout.precision(16);
 
-    neural_network<tan_h> nn;
+    neural_network nn;
     convolutional_layer<tan_h>  C1(28 /* in_width*/, 24 /* out_width*/,  1 /*in_fm*/,  6 /*out_fm*/);
     subsampling_layer<tan_h>    S2(24 /* in_width*/, 12 /* out_width*/,  6 /*fm*/,     2 /*block_size*/);
     convolutional_layer<tan_h>  C3(12 /* in_width*/, 10 /* out_width*/,  6 /*in_fm*/, 16 /*out_fm*/);
@@ -158,7 +158,7 @@ fullyconnected_test()
     fullyconnected_layer<tan_h> L3(6,5);
     fullyconnected_layer<tan_h> L4(5,4);
 
-    neural_network<tan_h> nn;
+    neural_network nn;
     nn.add_layer(&L1);
     nn.add_layer(&L2);
     nn.add_layer(&L3);
@@ -206,7 +206,7 @@ cnn_training_test_mnist()
     mnist_reader mnist;
     mnist.read("data/mnist/", std::min(steps, 0));
 
-    neural_network<tan_h> nn;
+    neural_network nn;
     convolutional_layer<tan_h>  C1(28 /* in_width*/, 24 /* out_width*/, 1 /*in_fm*/,   6 /*out_fm*/);
     subsampling_layer<tan_h>    S2(24 /* in_width*/, 12 /* out_width*/, 6 /*fm*/,      2 /*block_size*/);
     convolutional_layer<tan_h>  C3(12 /* in_width*/, 10 /* out_width*/, 6 /*in_fm*/,  16 /*out_fm*/);
@@ -294,7 +294,7 @@ cnn_training_test_orl()
     orl.read("data/orl_faces/", std::min(steps, 400));
     orl.generate_counterexamples(600, 32, "data/misc/saopaulo.jpg");
 
-    neural_network<tan_h> nn;
+    neural_network nn;
     convolutional_layer<tan_h>  C1(32 /* in_width*/, 28 /* out_width*/, 1 /*in_fm*/,   2 /*out_fm*/);
     subsampling_layer<tan_h>    S2(28 /* in_width*/, 14 /* out_width*/, 2 /*fm*/,      2 /*block_size*/);
     convolutional_layer<tan_h>  C3(14 /* in_width*/, 12 /* out_width*/, 2 /*in_fm*/,   5 /*out_fm*/);

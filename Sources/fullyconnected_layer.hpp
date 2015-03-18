@@ -4,12 +4,12 @@
 namespace nn {
     
 template <typename ActivationFunction = sigmoid>
-class fullyconnected_layer : public layer {
+class fullyconnected_layer : public output_layer {
 
 public:
 
     fullyconnected_layer(uint_t in_dim, uint_t out_dim)
-        : layer(in_dim, out_dim, out_dim, in_dim*out_dim)
+        : output_layer(in_dim, out_dim, out_dim, in_dim*out_dim)
     {
         std::cout<<"DEBUG: fullyconnected_layer(" <<in_dim<<","<<out_dim<<")\n";
     }
@@ -29,7 +29,7 @@ public:
         }
     }
 
-    float_t squared_error(const vec_t& soll) {
+    float_t squared_error(const vec_t& soll) const {
 
         assert(soll.size()==out_dim_);
         
@@ -91,14 +91,7 @@ public:
         }
     } 
 
-    void set_soll( const vec_t* soll ) {
-        soll_ = soll;
-    }
-
     ActivationFunction ActFunc;
-
-private:
-    const vec_t* soll_ = nullptr;
 };
 
 } /* namespace nn */

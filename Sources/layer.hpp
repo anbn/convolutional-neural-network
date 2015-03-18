@@ -99,6 +99,26 @@ protected:
 };
 
 
+class output_layer : public layer {
+
+public:
+    
+    output_layer(uint_t in_dim, uint_t out_dim, uint_t bias_dim, uint_t weights_dim) 
+        : layer(in_dim, out_dim, bias_dim, weights_dim)
+    {}
+
+    virtual float_t squared_error(const vec_t& soll) const = 0;
+
+    void set_soll( const vec_t* soll ) {
+        soll_ = soll;
+    }
+    
+protected:
+
+    const vec_t* soll_ = nullptr;
+};
+
+
 } /* namespace nn */
 
 #endif /* LAYER_HPP */

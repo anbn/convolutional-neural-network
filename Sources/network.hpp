@@ -12,7 +12,6 @@
 
 namespace nn {
 
-template<typename ActivationFunction>
 class neural_network {
 
 public:
@@ -48,7 +47,7 @@ public:
 
     float_t squared_error(const vec_t& soll) {
         
-        fullyconnected_layer<ActivationFunction> *last = dynamic_cast<fullyconnected_layer<ActivationFunction>*>(last_layer_);
+        output_layer *last = dynamic_cast<output_layer*>(last_layer_);
         assert(last != nullptr);
         
         return last->squared_error(soll);
@@ -69,7 +68,8 @@ public:
 
     void backward(const vec_t& in, const vec_t& soll) {
        
-        fullyconnected_layer<ActivationFunction> *last = dynamic_cast<fullyconnected_layer<ActivationFunction>*>(last_layer_);
+        output_layer *last = dynamic_cast<output_layer*>(last_layer_);
+        
         assert(last != nullptr);
 
         last->set_soll(&soll);

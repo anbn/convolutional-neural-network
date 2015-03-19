@@ -1,11 +1,7 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
 
-#include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
 
 #define GRADIENT_CHECK  0
 #define VERBOSE         0
@@ -110,13 +106,13 @@ cnn_training_test_mnist()
     nn.add_layer(&C5);
     nn.add_layer(&O6);
     
-    nn.set_learningrate(1.0/(100000));
+    nn.set_learning_rate(1.0/(100000));
     
     vec_t soll {-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8};
     int last_label = 0;
     for(int s=0; s<steps; s++) {
         
-        //if (s!=0 && s%1000==0) nn.set_learningrate(1.0/(100000));
+        //if (s!=0 && s%1000==0) nn.set_learning_rate(1.0/(100000));
         
         int num_example = s % mnist.num_examples();
 
@@ -170,9 +166,9 @@ cnn_training_test_mnist_pool()
     mnist.read("data/mnist/", std::min(steps, 0));
 
     neural_network nn;
-    convolutional_layer<relu>  C1(28 /* in_width*/, 24 /* out_width*/, 1 /*in_fm*/,   8 /*out_fm*/);
-    subsampling_layer<sigmoid>    S2(24 /* in_width*/, 12 /* out_width*/, 8 /*fm*/,      2 /*block_size*/);
-    convolutional_layer<relu>  C3(12 /* in_width*/, 10 /* out_width*/, 8 /*in_fm*/,  16 /*out_fm*/);
+    convolutional_layer<tan_h>  C1(28 /* in_width*/, 24 /* out_width*/, 1 /*in_fm*/,   8 /*out_fm*/);
+    subsampling_layer<tan_h> S2(24 /* in_width*/, 12 /* out_width*/, 8 /*fm*/,      2 /*block_size*/);
+    convolutional_layer<tan_h>  C3(12 /* in_width*/, 10 /* out_width*/, 8 /*in_fm*/,  16 /*out_fm*/);
 #define _ false
 #define X true
     const bool connection[] = {
@@ -188,39 +184,49 @@ cnn_training_test_mnist_pool()
 #undef _
 #undef X
     C3.set_connection(connection, 8*16);
-    subsampling_layer<sigmoid>    S4(10 /* in_width*/,  5 /* out_width*/, 16 /*fm*/,      2 /*block_size*/);
+    subsampling_layer<tan_h>  S4(10 /* in_width*/,  5 /* out_width*/, 16 /*fm*/,      2 /*block_size*/);
     fullyconnected_layer<tan_h> O5( 5 /* in_width*/, 10 /* out_width*/, 16 /*in_fm*/);
+    softmax_layer M6( 10 /* in_dim */);
     nn.add_layer(&C1);
     nn.add_layer(&S2);
     nn.add_layer(&C3);
     nn.add_layer(&S4);
     nn.add_layer(&O5);
+    //nn.add_layer(&M6);
     
-    nn.set_learningrate(1.0/(1000000));
+    nn.set_learning_rate(0.00085);
     
-    vec_t soll {-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8};
+    vec_t soll {0,0,0,0,0,0,0,0,0,0};
     int last_label = 0;
     for(int s=0; s<steps; s++) {
         
-        //if (s!=0 && s%1000==0) nn.set_learningrate(1.0/(100000));
+        if (s!=0 && s%1000==0)
+            nn.set_learning_rate(nn.learning_rate()*0.85);
         
         int num_example = s % mnist.num_examples();
 
         nn.forward(mnist.image(num_example).data());
         
-        soll[last_label] = -0.8;
+        soll[last_label] =  -0.8;
         last_label = mnist.label(num_example);
-        soll[last_label] =  0.8;
+        soll[last_label] =   0.8;
 
         nn::float_t error = nn.squared_error(soll);
         std::cout<<"Step: "<<s<<"\n";
-        for (int o=0; o<soll.size(); o++)
+        for (int o=0; o<soll.size(); o++) {
             std::cout<<"    ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
+        }
         std::cout<<"    error "<<error<<"\n";
 
         nn.backward(mnist.image(num_example).data(), soll);
 
-        if ( s%25000 < 100 ) {
+
+        //std::cout<<"- O5 ---------------------------\n";
+        //nn.gc_check_weights(mnist.image(num_example).data(), soll, &O5);
+        //std::cout<<"- O5 bias ----------------------\n";
+        //nn.gc_check_bias(mnist.image(num_example).data(), soll, &O5);
+    
+        if ( s%10000 < 100 ) {
 
             Image<nn::float_t> img_in(28, 1*28, std::begin(mnist.image(num_example).data()), std::end(mnist.image(num_example).data()));
             Image<nn::float_t> img_c1(24, 8*24, std::begin(C1.output()), std::end(C1.output()));
@@ -228,16 +234,18 @@ cnn_training_test_mnist_pool()
             Image<nn::float_t> img_c3(10,16*10, std::begin(C3.output()), std::end(C3.output()));
             Image<nn::float_t> img_s4( 5, 16*5, std::begin(S4.output()), std::end(S4.output()));
             Image<nn::float_t> img_o5( 1,   10, std::begin(O5.output()), std::end(O5.output()));
+            Image<nn::float_t> img_m6( 1,   10, std::begin(M6.output()), std::end(M6.output()));
             Image<nn::float_t> img_so( 1,   10, std::begin(soll), std::end(soll));
 
             cv::Mat img(cv::Size(400,200), CV_8UC1, 100);
             img_in.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
-            img_c1.toIntensity(0,3).exportMat().copyTo(img(cv::Rect( 50,0,img_c1.width(), img_c1.height())));
-            img_s2.toIntensity(0,3).exportMat().copyTo(img(cv::Rect(100,0,img_s2.width(), img_s2.height())));
-            img_c3.toIntensity(0,5).exportMat().copyTo(img(cv::Rect(150,0,img_c3.width(), img_c3.height())));
-            img_s4.toIntensity(0,3).exportMat().copyTo(img(cv::Rect(200,0,img_s4.width(), img_s4.height())));
+            img_c1.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect( 50,0,img_c1.width(), img_c1.height())));
+            img_s2.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(100,0,img_s2.width(), img_s2.height())));
+            img_c3.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(150,0,img_c3.width(), img_c3.height())));
+            img_s4.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(200,0,img_s4.width(), img_s4.height())));
             img_o5.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(250,0,img_o5.width(), img_o5.height())));
-            img_so.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(251,0,img_o5.width(), img_o5.height())));
+            img_m6.toIntensity( 0,1).exportMat().copyTo(img(cv::Rect(251,0,img_m6.width(), img_m6.height())));
+            img_so.toIntensity( 0,1).exportMat().copyTo(img(cv::Rect(252,0,img_so.width(), img_so.height())));
 
             cv::imshow("cnn", img);
             
@@ -245,7 +253,6 @@ cnn_training_test_mnist_pool()
         }
     }
 }
-
 
 void
 cnn_training_test_orl()
@@ -280,12 +287,12 @@ cnn_training_test_orl()
     nn.add_layer(&C5);
     nn.add_layer(&O6);
     
-    nn.set_learningrate(1.0/(10000));
+    nn.set_learning_rate(1.0/(10000));
     
     vec_t soll {0.0};
     for(int s=0; s<steps; s++) {
         
-        //if (s!=0 && s%1000==0) nn.set_learningrate(1.0/(100000));
+        //if (s!=0 && s%1000==0) nn.set_learning_rate(1.0/(100000));
         
         int num_example = randomize(0.0, (double)orl.num_examples());
 
@@ -334,9 +341,9 @@ main(int argc, const char *argv[])
 
 #if GRADIENT_CHECK
     std::cout<<"Compiled with gradient checking (GRADIENT_CHECK is 1).\n";
-    gc_fullyconnected();
-    gc_cnn_training();
-    gc_cnn_training_fc2d();
+    //gc_fullyconnected();
+    //gc_cnn_training();
+    //gc_cnn_training_fc2d();
 #endif
 
     //fullyconnected_test();

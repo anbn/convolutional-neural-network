@@ -67,9 +67,11 @@ public:
 
         for (uint_t o=0; o<out_dim_; o++) {
 
-            if (next_layer_ == nullptr) { /* is the last layer */
-                delta_[o] = (output_[o]-(*soll_)[o]) * ActFunc.df(output_[o]); 
-            } else {               /* not the last layer, but followed 1d layer */
+            if (next_layer_ == nullptr) {
+                /* is the last layer */
+                delta_[o] = ActFunc.df(output_[o]) * (output_[o]-(*soll_)[o]);
+            } else {
+                /* not the last layer, but followed 1d layer */
                 delta_[o] = ActFunc.df(output_[o]) * next_layer_->in_delta_sum(o,0,0);
             }
 

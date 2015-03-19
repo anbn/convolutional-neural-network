@@ -39,11 +39,11 @@ public:
         prev_layer_ = prev_layer;
     }
     
-    void set_learningrate(float_t v) { learning_rate_ = v; }
+    void set_learning_rate(float_t v) { learning_rate_ = v; }
     void set_momentum(float_t v) { momentum_ = v; }
     void set_decay(float_t v) { decay_ = v; }
 
-    float_t learningrate() { return learning_rate_; }
+    float_t learning_rate() { return learning_rate_; }
     float_t momentum() { return momentum_; }
     float_t decay() { return decay_; }
 

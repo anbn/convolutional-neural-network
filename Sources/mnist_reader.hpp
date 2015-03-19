@@ -19,13 +19,8 @@ public:
 
     mnist_reader() : num_examples_(0) {}
 
-//    void rescale(float_t min, float_t max) {
-//        for (auto& img : images_)
-//            img.rescale(min, max);
-//    
-//    }
-    
-    bool read(std::string path, uint_t num) {
+
+    bool read(std::string path_images, std::string path_labels, uint_t num) {
         std::cout<<"Reading mnist... ";
         
         if (num == 0 || num > 60000) {
@@ -36,11 +31,11 @@ public:
         images_.resize(num);
         labels_.resize(num);
 
-        std::ifstream file_images(path+"/train-images-idx3-ubyte", std::ios::in|std::ios::binary);
-        std::ifstream file_labels(path+"/train-labels-idx1-ubyte", std::ios::in|std::ios::binary);
+        std::ifstream file_images(path_images, std::ios::in|std::ios::binary);
+        std::ifstream file_labels(path_labels, std::ios::in|std::ios::binary);
 
         if (!file_images.is_open() || !file_labels.is_open()) {
-            std::cout<<"\nError reading mnist files ("<<path<<"/train-images-idx3-ubyte and "<<path<<"/)\n";
+            std::cout<<"\nError reading mnist files ("<<path_images<<", "<<path_labels<<")\n";
             file_images.close();
             file_labels.close();
             return false;
@@ -72,7 +67,6 @@ public:
         unsigned char byte, label;
         std::vector<float_t> data(rows*columns);
         for (uint_t n = 0; n<num; ++n) {
-            
             file_labels.read(reinterpret_cast<char*>(&label), sizeof(unsigned char));
             for (uint_t i=0; i<rows*columns; i++) {
                 file_images.read(reinterpret_cast<char*>(&byte), sizeof(unsigned char));
@@ -90,8 +84,8 @@ public:
         return true;
     }
 
-protected:
-
+private:
+    
     uint_t num_examples_;
         
     uint_t image_width_;
@@ -102,7 +96,7 @@ protected:
 
 void mnist_reader_test() {
     mnist_reader mnist;
-    mnist.read("data/mnist/", 15);
+    mnist.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 15);
 
     for (int i=0; i<mnist.num_examples(); i++) {
         Image<nn::float_t> img = mnist.image(i);

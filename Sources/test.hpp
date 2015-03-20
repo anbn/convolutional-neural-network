@@ -42,7 +42,7 @@ void
 gc_cnn_training()
 {
     mnist_reader mnist;
-    mnist.read( "data/mnist/", 10);
+    mnist.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 10);
 
     const nn::float_t gc_epsilon = 0.00001;
     std::cout.setf(std::ios::fixed, std::ios::floatfield);
@@ -128,7 +128,7 @@ void
 gc_cnn_training_fc2d()
 {
     mnist_reader mnist;
-    mnist.read( "data/mnist/", 10);
+    mnist.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 10);
 
     const nn::float_t gc_epsilon = 0.00001;
     std::cout.setf(std::ios::fixed, std::ios::floatfield);

@@ -12,7 +12,7 @@ PARAMS	 =
 
 .PHONY: all clean	
 
-all: $(OBJDIR) $(TARGET)
+all: clean $(OBJDIR) $(TARGET)
 	@echo "${GREEN}Build complete. Running $(TARGET)...${NC}"
 	./$(TARGET) $(PARAMS)
 

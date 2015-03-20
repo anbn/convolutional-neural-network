@@ -50,12 +50,12 @@ public:
         last_layer_ = l;
     }
 
-    float_t squared_error(const vec_t& soll) {
+    float_t error(const vec_t& soll) {
         
         output_layer *last = dynamic_cast<output_layer*>(last_layer_);
         assert(last != nullptr);
         
-        return last->squared_error(soll);
+        return last->error(soll);
     }
 
     void forward(const vec_t& in) {
@@ -96,21 +96,21 @@ public:
 
             gc_layer->set_weight(w, weight+gc_epsilon);
             this->forward(in);
-            float_t errorp = this->squared_error(soll);
+            float_t errorp = this->error(soll);
 
             gc_layer->set_weight(w, weight-gc_epsilon);
             this->forward(in);
-            float_t errorm = this->squared_error(soll);
+            float_t errorm = this->error(soll);
 
             gc_layer->set_weight(w, weight);
             this->forward(in);
             this->backward(in, soll);
             float_t gradient = gc_layer->gc_gradient_weights(w);
 
-            float_t q = (errorp-errorm)/(4.0*gc_epsilon);
+            float_t q = (errorp-errorm)/(2.0*gc_epsilon);
             float_t d = fabs(q - gradient);
             std::cout <<"FD - dE/d["<< w <<"]="<< q <<" - "<< gradient <<" = " << d <<"\n";
-            //assert( d < 0.000001 );
+            assert( d < 0.000001 );
         }
     }
 
@@ -124,23 +124,28 @@ public:
 
             gc_layer->set_bias(w, bias+gc_epsilon);
             this->forward(in);
-            float_t errorp = this->squared_error(soll);
+            float_t errorp = this->error(soll);
 
             gc_layer->set_bias(w, bias-gc_epsilon);
             this->forward(in);
-            float_t errorm = this->squared_error(soll);
+            float_t errorm = this->error(soll);
 
             gc_layer->set_bias(w, bias);
             this->forward(in);
             this->backward(in, soll);
             float_t gradient = gc_layer->gc_gradient_bias(w);
 
-            float_t q = (errorp-errorm)/(4.0*gc_epsilon);
+            float_t q = (errorp-errorm)/(2.0*gc_epsilon);
             float_t d = fabs(q - gradient);
             std::cout <<"FD - dE/d["<< w <<"]="<< q <<" - "<< gradient <<" = " << d <<"\n";
-            //assert( d < 0.000001 );
+            assert( d < 0.000001 );
         }
     }
+
+    void gc_check() {
+    
+    }
+    
 #endif
 
 private:

@@ -38,13 +38,13 @@ public:
         }
     }
 
-    float_t squared_error(const vec_t& soll) const {
+    float_t error(const vec_t& soll) const {
         assert(soll.size()==out_dim_);
         
         float_t error = 0.0;
         for(uint_t o=0; o<out_dim_; o++)
             error += (soll[o]-output_[o])*(soll[o]-output_[o]);
-        return error;
+        return error / 2.0;
     }
 
     float_t in_delta_sum(uint_t in_fm, uint_t ix, uint_t iy) const {

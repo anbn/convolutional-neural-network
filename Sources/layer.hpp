@@ -110,7 +110,7 @@ public:
         : layer(in_dim, out_dim, bias_dim, weights_dim)
     {}
 
-    virtual float_t squared_error(const vec_t& soll) const = 0;
+    virtual float_t error(const vec_t& soll) const = 0;
 
     void set_soll( const vec_t* soll ) {
         soll_ = soll;

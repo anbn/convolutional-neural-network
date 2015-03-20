@@ -32,29 +32,26 @@ public:
         }
     }
 
-    float_t squared_error(const vec_t& soll) const {
+    float_t error(const vec_t& soll) const {
         assert(soll.size()==out_dim_);
         
         float_t error = 0.0;
         for(uint_t o=0; o<out_dim_; o++)
-            error += (soll[o]-output_[o])*(soll[o]-output_[o]);
-        return error;
+            error += soll[o] * log(output_[o]);
+
+        return -error;
     }
 
     float_t in_delta_sum(uint_t fm, uint_t ix, uint_t iy) const {
         assert(fm < in_dim_);
         assert(ix==0 && iy==0);
         
-        return (output_[fm]-(*soll_)[fm]);
+        return output_[fm] - (*soll_)[fm];
     }
 
     void backward(const vec_t& in) {
 #if VERBOSE
         std::cout<<"(backwardsoftmax) ";
-        //for (uint_t o=0; o<out_dim_; o++) {
-        //    delta_[o] = (output_[o]-(*soll_)[o]);
-        //    
-        //}
 #endif
     } 
 };

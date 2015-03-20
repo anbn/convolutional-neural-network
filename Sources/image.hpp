@@ -1,7 +1,6 @@
 #ifndef IMAGE_HPP
 #define IMAGE_HPP
 
-
 #include <algorithm> /* for std::minmax */
 
 typedef unsigned char intensity_t;
@@ -105,14 +104,12 @@ public:
     }
 
     Image<float_t> convolution(uint_t kernel_size, std::vector<float_t> kernel ) {
+        assert( (kernel_size%2==1) && kernel.size()==(kernel_size*kernel_size));
         
         Image<float_t> result(width_, height_);
-        float_t sum;
-
-        assert( (kernel_size%2==1) && kernel.size()==(kernel_size*kernel_size));
-
         int s = (kernel_size-1)/2;
-
+        
+        float_t sum;
         for (int h=s; h<height_-s; h++) {
             for (int w=s; w<width_-s; w++) {
                 sum = 0;
@@ -130,10 +127,9 @@ public:
 
     template <typename CombineFunction>
     Image<T> combinePixels(Image<T> img, CombineFunction f ) {
-        
-        Image<T> result(width_, height_);
-
         assert(width_==img.width_ && height_==img.height_);
+
+        Image<T> result(width_, height_);
         
         for (int w=0; w<width_; w++) {
             for (int h=0; h<height_; h++) {
@@ -144,22 +140,19 @@ public:
     }
    
     Image<intensity_t> toIntensity(T min, T max) {
-        
         std::vector<intensity_t> data(width_*height_,0);
-
         for (int w=0; w<width_; w++) {
             for (int h=0; h<height_; h++) {
                 data[h*width_+w] = static_cast<intensity_t>((data_[h * width_ + w]-min)/(max-min)*255.0);
             }
         }
-
         return Image<intensity_t>(width_, height_, std::begin(data), std::end(data));
     }
 
-//    Image<intensity_t> toIntensity() {
-//        auto mm = std::minmax(std::begin(data_), std::end(data_));
-//        return toIntensity(mm.first, mm.second);
-//    }
+    Image<intensity_t> toIntensity() {
+        auto mm = std::minmax_element(std::begin(data_), std::end(data_));
+        return toIntensity(*(mm.first), *(mm.second));
+    }
 
     cv::Mat exportMat() const {
         cv::Mat img(cv::Size(this->width_, this->height_),CV_8UC1);

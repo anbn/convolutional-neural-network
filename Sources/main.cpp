@@ -16,9 +16,8 @@ using namespace nn;
 
 void print_vec(std::string s, vec_t v) {
     std::cout<<s;
-    for (auto e : v) {
+    for (auto e : v)
         std::cout<<" "<<e;
-    }
     std::cout<<"\n";
 }
 
@@ -72,104 +71,42 @@ fullyconnected_test()
 }
 
 
-void
-cnn_training_test_mnist()
+nn::float_t mnist_rate(neural_network &nn)
 {
-    const int steps = 100000;
-    mnist_reader mnist;
-    mnist.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 60000);
-
-    neural_network nn;
-    convolutional_layer<tan_h>  C1(28 /* in_width*/, 24 /* out_width*/, 1 /*in_fm*/,   6 /*out_fm*/);
-    subsampling_layer<tan_h>    S2(24 /* in_width*/, 12 /* out_width*/, 6 /*fm*/,      2 /*block_size*/);
-    convolutional_layer<tan_h>  C3(12 /* in_width*/, 10 /* out_width*/, 6 /*in_fm*/,  16 /*out_fm*/);
-#define _ false
-#define X true
-    const bool connection[] = {
-        X, _, _, _, X, X, X, _, _, X, X, X, X, _, X, X,
-        X, X, _, _, _, X, X, X, _, _, X, X, X, X, _, X,
-        X, X, X, _, _, _, X, X, X, _, _, X, _, X, X, X,
-        _, X, X, X, _, _, X, X, X, X, _, _, X, _, X, X,
-        _, _, X, X, X, _, _, X, X, X, X, _, X, X, _, X,
-        _, _, _, X, X, X, _, _, X, X, X, X, _, X, X, X
-    };
-#undef _
-#undef X
-    C3.set_connection(connection, 6*16);
-    subsampling_layer<tan_h>    S4(10 /* in_width*/,  5 /* out_width*/, 16 /*fm*/,     2 /*block_size*/);
-    convolutional_layer<tan_h>  C5( 5 /* in_width*/,  1 /* out_width*/, 16 /*in_fm*/, 64 /*out_fm*/);
-    fullyconnected_layer<tan_h> O6(64 /* in_width*/, 10 /* out_width*/);
-    nn.add_layer(&C1);
-    nn.add_layer(&S2);
-    nn.add_layer(&C3);
-    nn.add_layer(&S4);
-    nn.add_layer(&C5);
-    nn.add_layer(&O6);
+    static mnist_reader mnist_test;
+    if (mnist_test.num_examples()==0)
+        mnist_test.read("data/mnist/t10k-images-idx3-ubyte", "data/mnist/t10k-labels-idx1-ubyte", 10000);
     
-    nn.set_learning_rate(1.0/(100000));
-    
-    vec_t soll {-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8};
-    int last_label = 0;
-    for(int s=0; s<steps; s++) {
-        
-        //if (s!=0 && s%1000==0) nn.set_learning_rate(1.0/(100000));
-        
-        int num_example = s % mnist.num_examples();
-
-        nn.forward(mnist.image(num_example).data());
-        
-        soll[last_label] = -1;
-        last_label = mnist.label(num_example);
-        soll[last_label] =  1;
-
-        nn::float_t error = nn.error(soll);
-        std::cout<<"Step: "<<s<<"\n";
-        for (int o=0; o<soll.size(); o++)
-            std::cout<<"    ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
-        std::cout<<"    error "<<error<<"\n";
-
-        nn.backward(mnist.image(num_example).data(), soll);
-
-        if ( s%10000 < 50 ) {
-
-            Image<nn::float_t> img_in(28, 1*28, std::begin(mnist.image(num_example).data()), std::end(mnist.image(num_example).data()));
-            Image<nn::float_t> img_c1(24, 6*24, std::begin(C1.output()), std::end(C1.output()));
-            Image<nn::float_t> img_s2(12, 6*12, std::begin(S2.output()), std::end(S2.output()));
-            Image<nn::float_t> img_c3(10,16*10, std::begin(C3.output()), std::end(C3.output()));
-            Image<nn::float_t> img_s4( 5, 16*5, std::begin(S4.output()), std::end(S4.output()));
-            Image<nn::float_t> img_c5( 1,   64, std::begin(C5.output()), std::end(C5.output()));
-            Image<nn::float_t> img_o6( 1,   10, std::begin(O6.output()), std::end(O6.output()));
-            Image<nn::float_t> img_so( 1,   10, std::begin(soll), std::end(soll));
-
-            cv::Mat img(cv::Size(400,200), CV_8UC1, 100);
-            img_in.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
-            img_c1.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect( 50,0,img_c1.width(), img_c1.height())));
-            img_s2.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(100,0,img_s2.width(), img_s2.height())));
-            img_c3.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(150,0,img_c3.width(), img_c3.height())));
-            img_s4.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(200,0,img_s4.width(), img_s4.height())));
-            img_c5.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(250,0,img_c5.width(), img_c5.height())));
-            img_o6.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(300,0,img_o6.width(), img_o6.height())));
-            img_so.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(301,0,img_o6.width(), img_o6.height())));
-
-            cv::imshow("cnn", img);
-            
-            while(cv::waitKey(0)!=27);
+    int c=0, w=0;
+    for (int n=0; n<mnist_test.num_examples(); n++) {
+        nn.forward(mnist_test.image(n).data());
+        int max = 0;
+        for (int o=0; o<10; o++) {
+            if(nn.output()[max]<nn.output()[o])
+                max = o;
+        }
+        if(max==mnist_test.label(n)) {
+            c++;
+        } else {
+            w++;
         }
     }
+    nn::float_t rate = ((nn::float_t) c)/(c+w);
+    std::cout<<"mnist_rate(...): "<<c<<" correct, "<<w<<" false ("<<rate<<")\n";
+    return rate;
 }
 
 void
 cnn_training_test_mnist_pool()
 {
     const int steps = 100000;
-    mnist_reader mnist_train, mnist_test;
-    mnist_train.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 1000);
-    //mnist_test.read("data/mnist/t10k-images-idx3-ubyte", "data/mnist/t10k-labels-idx1-ubyte", 10000);
+    mnist_reader mnist_train;
+    mnist_train.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 60000);
 
     neural_network nn;
-    convolutional_layer<tan_h>  C1(28 /* in_width*/, 24 /* out_width*/, 1 /*in_fm*/,   8 /*out_fm*/);
-    subsampling_layer<tan_h>    S2(24 /* in_width*/, 12 /* out_width*/, 8 /*fm*/,      2 /*block_size*/);
-    convolutional_layer<tan_h>  C3(12 /* in_width*/, 10 /* out_width*/, 8 /*in_fm*/,  16 /*out_fm*/);
+    convolutional_layer<relu>   C1(28 /* in_width*/, 24 /* out_width*/, 1 /*in_fm*/,   8 /*out_fm*/);
+    subsampling_layer<identity> S2(24 /* in_width*/, 12 /* out_width*/, 8 /*fm*/,      2 /*block_size*/);
+    convolutional_layer<relu>   C3(12 /* in_width*/, 10 /* out_width*/, 8 /*in_fm*/,  16 /*out_fm*/);
 #define _ false
 #define X true
     const bool connection[] = {
@@ -185,8 +122,8 @@ cnn_training_test_mnist_pool()
 #undef _
 #undef X
     C3.set_connection(connection, 8*16);
-    subsampling_layer<tan_h>    S4(10 /* in_width*/,  5 /* out_width*/, 16 /*fm*/,      2 /*block_size*/);
-    fullyconnected_layer<tan_h> O5( 5 /* in_width*/, 10 /* out_width*/, 16 /*in_fm*/);
+    subsampling_layer<identity>    S4(10 /* in_width*/,  5 /* out_width*/, 16 /*fm*/,      2 /*block_size*/);
+    fullyconnected_layer<identity> O5( 5 /* in_width*/, 10 /* out_width*/, 16 /*in_fm*/);
     softmax_layer M6( 10 /* in_dim */);
     nn.add_layer(&C1);
     nn.add_layer(&S2);
@@ -201,7 +138,8 @@ cnn_training_test_mnist_pool()
     int last_label = 0;
     for(int s=0; s<steps; s++) {
         
-        std::cout<<"\rStep "<<s<<"\n";
+        std::cout<<"Step "<<s<<"\n";
+        
         if (s!=0 && s%1000==0)
             nn.set_learning_rate(nn.learning_rate()*0.85);
         
@@ -218,34 +156,17 @@ cnn_training_test_mnist_pool()
         for (int o=0; o<soll.size(); o++) {
             std::cout<<"    ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
         }
-        std::cout<<"    error "<<error<<"\n";
+        //std::cout<<"\n    error "<<error<<"\n";
 
         nn.backward(mnist_train.image(num_example).data(), soll);
 
-        /*
-        if (s>1000 && s%10000==0) {
-            int c=0,w=0;
-            for (int n=0; n<10000; n++) {
-                nn.forward(mnist_test.image(n).data());
-                int max = 0;
-                for (int o=0; o<10; o++){
-                    if(nn.output()[max]<nn.output()[o])
-                        max = o;
-                }
-                if(max==mnist_test.label(n)) {
-                    c++;
-                } else if ((n<1000) || (n>5000&&n<6000)) {
-                    w++;
-                    Image<nn::float_t> img_in(28, 1*28, std::begin(mnist_train.image(n).data()), std::end(mnist_train.image(n).data()));
-                    cv::imshow("img "+std::to_string(n),img_in.toIntensity(-1,1).exportMat());
-                    std::cout<<n<<" ";
-                }
-            }
-            std::cout<<"TEST: "<<c<<" vs. "<<w<<" == "<<((nn::float_t) c/(c+w))<<"\n";
+#if 1
+        if( s!=0 && s%10000==0 ) {
+            mnist_rate(nn);
         }
-        */
+#endif
         
-        if (s%10000 < 100 ) {
+        if ( s%10000 < 100 ) {
 
             Image<nn::float_t> img_in(28, 1*28, std::begin(mnist_train.image(num_example).data()), std::end(mnist_train.image(num_example).data()));
             Image<nn::float_t> img_c1(24, 8*24, std::begin(C1.output()), std::end(C1.output()));
@@ -257,14 +178,14 @@ cnn_training_test_mnist_pool()
             Image<nn::float_t> img_so( 1,   10, std::begin(soll), std::end(soll));
 
             cv::Mat img(cv::Size(400,200), CV_8UC1, 100);
-            img_in.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
-            img_c1.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect( 50,0,img_c1.width(), img_c1.height())));
-            img_s2.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(100,0,img_s2.width(), img_s2.height())));
-            img_c3.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(150,0,img_c3.width(), img_c3.height())));
-            img_s4.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(200,0,img_s4.width(), img_s4.height())));
-            img_o5.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(250,0,img_o5.width(), img_o5.height())));
-            img_m6.toIntensity( 0,1).exportMat().copyTo(img(cv::Rect(251,0,img_m6.width(), img_m6.height())));
-            img_so.toIntensity( 0,1).exportMat().copyTo(img(cv::Rect(252,0,img_so.width(), img_so.height())));
+            img_in.toIntensity().exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
+            img_c1.toIntensity().exportMat().copyTo(img(cv::Rect( 50,0,img_c1.width(), img_c1.height())));
+            img_s2.toIntensity().exportMat().copyTo(img(cv::Rect(100,0,img_s2.width(), img_s2.height())));
+            img_c3.toIntensity().exportMat().copyTo(img(cv::Rect(150,0,img_c3.width(), img_c3.height())));
+            img_s4.toIntensity().exportMat().copyTo(img(cv::Rect(200,0,img_s4.width(), img_s4.height())));
+            img_o5.toIntensity().exportMat().copyTo(img(cv::Rect(250,0,img_o5.width(), img_o5.height())));
+            img_m6.toIntensity().exportMat().copyTo(img(cv::Rect(251,0,img_m6.width(), img_m6.height())));
+            img_so.toIntensity().exportMat().copyTo(img(cv::Rect(252,0,img_so.width(), img_so.height())));
 
             cv::imshow("cnn", img);
             
@@ -273,87 +194,6 @@ cnn_training_test_mnist_pool()
     }
 }
 
-void
-cnn_training_test_orl()
-{
-    const int steps = 100000;
-    orl_reader orl;
-    orl.read("data/orl_faces/", std::min(steps, 400));
-    orl.generate_counterexamples(600, 32, "data/misc/saopaulo.jpg");
-
-    neural_network nn;
-    convolutional_layer<tan_h>  C1(32 /* in_width*/, 28 /* out_width*/, 1 /*in_fm*/,   2 /*out_fm*/);
-    subsampling_layer<tan_h>    S2(28 /* in_width*/, 14 /* out_width*/, 2 /*fm*/,      2 /*block_size*/);
-    convolutional_layer<tan_h>  C3(14 /* in_width*/, 12 /* out_width*/, 2 /*in_fm*/,   5 /*out_fm*/);
-
-#define _ false
-#define X true
-    const bool connection[] = {
-        X, X, _, _, X, 
-        _, _, X, X, X, 
-    };
-#undef _
-#undef X
-    C3.set_connection(connection, 2*5);
-
-    subsampling_layer<tan_h>    S4(12 /* in_width*/,  6 /* out_width*/, 5 /*fm*/,     2 /*block_size*/);
-    convolutional_layer<tan_h>  C5( 6 /* in_width*/,  1 /* out_width*/, 5 /*in_fm*/,  5 /*out_fm*/);
-    fullyconnected_layer<tan_h> O6( 5 /* in_width*/,  1 /* out_width*/);
-    nn.add_layer(&C1);
-    nn.add_layer(&S2);
-    nn.add_layer(&C3);
-    nn.add_layer(&S4);
-    nn.add_layer(&C5);
-    nn.add_layer(&O6);
-    
-    nn.set_learning_rate(1.0/(10000));
-    
-    vec_t soll {0.0};
-    for(int s=0; s<steps; s++) {
-        
-        //if (s!=0 && s%1000==0) nn.set_learning_rate(1.0/(100000));
-        
-        int num_example = randomize(0.0, (double)orl.num_examples());
-
-        nn.forward(orl.image(num_example).data());
-        
-        soll[0] = orl.label(num_example);
-
-        nn::float_t error = nn.error(soll);
-        std::cout<<"Step: "<<s<<"\n";
-        for (int o=0; o<soll.size(); o++)
-            std::cout<<"    ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
-        std::cout<<"    error "<<error<<"\n";
-
-        nn.backward(orl.image(num_example).data(), soll);
-
-        if ( s%10000 < 50 ) {
-
-            Image<nn::float_t> img_in(32, 1*32, std::begin(orl.image(num_example).data()), std::end(orl.image(num_example).data()));
-            Image<nn::float_t> img_c1(28, 2*28, std::begin(C1.output()), std::end(C1.output()));
-            Image<nn::float_t> img_s2(14, 2*14, std::begin(S2.output()), std::end(S2.output()));
-            Image<nn::float_t> img_c3(12, 5*12, std::begin(C3.output()), std::end(C3.output()));
-            Image<nn::float_t> img_s4( 6,  5*6, std::begin(S4.output()), std::end(S4.output()));
-            Image<nn::float_t> img_c5( 1,    5, std::begin(C5.output()), std::end(C5.output()));
-            Image<nn::float_t> img_o6( 1,    1, std::begin(O6.output()), std::end(O6.output()));
-            /* soll */
-            Image<nn::float_t> img_so( 1,    1, std::begin(soll), std::end(soll));
-
-            cv::Mat img(cv::Size(400,200), CV_8UC1, 100);
-            img_in.toIntensity( 0,1).exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
-            img_c1.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect( 50,0,img_c1.width(), img_c1.height())));
-            img_s2.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(100,0,img_s2.width(), img_s2.height())));
-            img_c3.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(150,0,img_c3.width(), img_c3.height())));
-            img_s4.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(200,0,img_s4.width(), img_s4.height())));
-            img_c5.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(250,0,img_c5.width(), img_c5.height())));
-            img_o6.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(300,0,img_o6.width(), img_o6.height())));
-            img_so.toIntensity(-1,1).exportMat().copyTo(img(cv::Rect(301,0,img_o6.width(), img_o6.height())));
-            cv::imshow("cnn", img);
-            
-            while(cv::waitKey(0)!=27);
-        }
-    }
-}
 int
 main(int argc, const char *argv[])
 {

@@ -94,6 +94,9 @@ private:
     std::vector<int> labels_;
 };
 
+
+
+
 void mnist_reader_test() {
     mnist_reader mnist;
     mnist.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 15);

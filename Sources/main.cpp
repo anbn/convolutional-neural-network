@@ -154,13 +154,14 @@ cnn_training_test_mnist_pool()
         nn::float_t error = nn.error(soll);
 
         for (int o=0; o<soll.size(); o++) {
-            std::cout<<"    ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
+            std::cout<<"   ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
         }
-        //std::cout<<"\n    error "<<error<<"\n";
+        std::cout<<"   error "<<error<<"\n";
 
         nn.backward(mnist_train.image(num_example).data(), soll);
 
-#if 1
+#if 0
+        /* test on mnist test set */
         if( s!=0 && s%10000==0 ) {
             mnist_rate(nn);
         }
@@ -168,6 +169,7 @@ cnn_training_test_mnist_pool()
         
         if ( s%10000 < 100 ) {
 
+            cv::Mat img(cv::Size(400,200), CV_8UC1, 100);
             Image<nn::float_t> img_in(28, 1*28, std::begin(mnist_train.image(num_example).data()), std::end(mnist_train.image(num_example).data()));
             Image<nn::float_t> img_c1(24, 8*24, std::begin(C1.output()), std::end(C1.output()));
             Image<nn::float_t> img_s2(12, 8*12, std::begin(S2.output()), std::end(S2.output()));
@@ -177,7 +179,6 @@ cnn_training_test_mnist_pool()
             Image<nn::float_t> img_m6( 1,   10, std::begin(M6.output()), std::end(M6.output()));
             Image<nn::float_t> img_so( 1,   10, std::begin(soll), std::end(soll));
 
-            cv::Mat img(cv::Size(400,200), CV_8UC1, 100);
             img_in.toIntensity().exportMat().copyTo(img(cv::Rect(  0,0,img_in.width(), img_in.height())));
             img_c1.toIntensity().exportMat().copyTo(img(cv::Rect( 50,0,img_c1.width(), img_c1.height())));
             img_s2.toIntensity().exportMat().copyTo(img(cv::Rect(100,0,img_s2.width(), img_s2.height())));
@@ -186,9 +187,18 @@ cnn_training_test_mnist_pool()
             img_o5.toIntensity().exportMat().copyTo(img(cv::Rect(250,0,img_o5.width(), img_o5.height())));
             img_m6.toIntensity().exportMat().copyTo(img(cv::Rect(251,0,img_m6.width(), img_m6.height())));
             img_so.toIntensity().exportMat().copyTo(img(cv::Rect(252,0,img_so.width(), img_so.height())));
-
             cv::imshow("cnn", img);
+
+#if 0
+            /* show weights */
+            cv::Mat img_weights(cv::Size(400,500), CV_8UC1, 100);
+            Image<nn::float_t> img_weights_c1(5, 8*5, std::begin(C1.weights()), std::end(C1.weights()));
+            Image<nn::float_t> img_weights_c3(3,16*3*8, std::begin(C3.weights()), std::end(C3.weights()));
             
+            img_weights_c1.toIntensity(-2,2).exportMat().copyTo(img_weights(cv::Rect( 50,0,img_weights_c1.width(), img_weights_c1.height())));
+            img_weights_c3.toIntensity(-2,2).exportMat().copyTo(img_weights(cv::Rect(150,0,img_weights_c3.width(), img_weights_c3.height())));
+            cv::imshow("cnn_weights", img_weights);
+#endif            
             while(cv::waitKey(0)!=27);
         }
     }

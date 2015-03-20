@@ -21,7 +21,7 @@ public:
     layer* prev_layer() const { return prev_layer_; }
 
     void resetWeights() {
-        randomize(std::begin(weights_), std::end(weights_), -0.5, .5);
+        randomize(std::begin(weights_), std::end(weights_), -0.5, 0.5);
         randomize(std::begin(bias_), std::end(bias_), -0.0, 0.0);
     }
 

@@ -97,7 +97,7 @@ nn::float_t mnist_rate(neural_network &nn)
 }
 
 void
-cnn_training_test_mnist_pool()
+cnn_training_test_mnist()
 {
     const int steps = 100000;
     mnist_reader mnist_train;
@@ -216,9 +216,7 @@ main(int argc, const char *argv[])
 #endif
 
     //fullyconnected_test();
-    //cnn_training_test_mnist();
-    cnn_training_test_mnist_pool();
-    //cnn_training_test_orl();
+    cnn_training_test_mnist();
 
     //orl_reader_test();
     //mnist_reader_test();

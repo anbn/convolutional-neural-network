@@ -1,10 +1,16 @@
-# Todo
+# Next Steps
 
-* softmax layers
+* DBN
+  * RBM pretraining import weights
+* CDBN
 
 ## Nice to hace
 
 * Adadelta
+* loading and saving of networks
+
+## Optional
+
 * Levenberg-Marquardt
 
 ## Resources

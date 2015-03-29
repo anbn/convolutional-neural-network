@@ -29,14 +29,25 @@ public:
             for (uint_t ox=0; ox<out_width_; ox++) {
                 for (uint_t oy=0; oy<out_width_; oy++) {
 
-                    float_t sum = 0.0;
+#if POOLING_AVG
+                    float_t sum_block = 0.0;
                     for (uint_t bx=0; bx<block_size_; bx++) {
                         for (uint_t by=0; by<block_size_; by++) {
-                            sum += in[(fm*in_width_ + (block_size_*ox+bx))*in_width_ + (block_size_*oy+by)];
+                            sum_block += in[(fm*in_width_ + (block_size_*ox+bx))*in_width_ + (block_size_*oy+by)];
                         }
                     }
-
-                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( weights_[fm]*sum + bias_[fm] );
+#elif POOLING_MAX
+                    float_t sum_block = in[(fm*in_width_ + (block_size_*ox+0))*in_width_ + (block_size_*oy+0)];
+                    for (uint_t bx=0; bx<block_size_; bx++) {
+                        for (uint_t by=0; by<block_size_; by++) {
+                            sum_block = std::max(sum_block, in[(fm*in_width_ + (block_size_*ox+bx))*in_width_ + (block_size_*oy+by)]);
+                        }
+                    }
+#else
+                    std::cout<<"Error: no pooling method defined.\n";
+                    exit(1);
+#endif
+                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( weights_[fm]*sum_block + bias_[fm] );
                 }
             }
         }
@@ -67,13 +78,24 @@ public:
                     const uint_t out_index = (fm*out_width_+ ox)*out_width_ + oy;
                     delta_[out_index] = A_.df(output_[out_index]) * next_layer_->in_delta_sum(fm,ox,oy);
                     sum_delta += delta_[out_index]; 
-                    
+#if POOLING_AVG
                     float_t sum_block = 0.0;
                     for (uint_t bx=0; bx<block_size_; bx++) {
                         for (uint_t by=0; by<block_size_; by++) {
                             sum_block += in[(fm*in_width_ + (block_size_*ox+bx  ))*in_width_ + (block_size_*oy+by  )];
                         }
                     }
+#elif POOLING_MAX
+                    float_t sum_block = in[(fm*in_width_ + (block_size_*ox+0  ))*in_width_ + (block_size_*oy+0  )];
+                    for (uint_t bx=0; bx<block_size_; bx++) {
+                        for (uint_t by=0; by<block_size_; by++) {
+                            sum_block = std::max(sum_block, in[(fm*in_width_ + (block_size_*ox+bx  ))*in_width_ + (block_size_*oy+by  )]);
+                        }
+                    }
+#else
+                    std::cout<<"Error: no pooling method defined.\n";
+                    exit(1);
+#endif
                     sum += sum_block * delta_[out_index];
                 }
             }

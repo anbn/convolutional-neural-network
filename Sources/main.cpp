@@ -4,6 +4,10 @@
 #include <opencv2/highgui/highgui.hpp>
 
 #define GRADIENT_CHECK  0
+
+#define POOLING_AVG     1
+#define POOLING_MAX     0
+
 #define VERBOSE         0
 
 #include "network.hpp"
@@ -14,8 +18,7 @@
 
 using namespace nn;
 
-void print_vec(std::string s, vec_t v) {
-    std::cout<<s;
+void print_vec(vec_t v) {
     for (auto e : v)
         std::cout<<" "<<e;
     std::cout<<"\n";
@@ -57,9 +60,9 @@ fullyconnected_test()
         }
         
         if(moving_error<0.15) {
-            print_vec("INPUT: ", input);
-            print_vec("SOLL:  ", soll);
-            print_vec("IST:   ", nn.output());
+            std::cout<<"INPUT "; print_vec(input);
+            std::cout<<"SOLL  "; print_vec(soll);
+            std::cout<<"IST   "; print_vec(nn.output());
         }
         std::cout<< s << "   error: "<<error<<" \t("<<moving_error<<")\n";
 
@@ -104,9 +107,9 @@ cnn_training_test_mnist()
     mnist_train.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 60000);
 
     neural_network nn;
-    convolutional_layer<relu>   C1(28 /* in_width*/, 24 /* out_width*/, 1 /*in_fm*/,   8 /*out_fm*/);
-    subsampling_layer<identity> S2(24 /* in_width*/, 12 /* out_width*/, 8 /*fm*/,      2 /*block_size*/);
-    convolutional_layer<relu>   C3(12 /* in_width*/, 10 /* out_width*/, 8 /*in_fm*/,  16 /*out_fm*/);
+    convolutional_layer<relu>   C1(28 /* in_width*/, 24 /* out_width*/, 1 /* in_fm*/,   8 /* out_fm*/);
+    subsampling_layer<identity> S2(24 /* in_width*/, 12 /* out_width*/, 8 /* fm*/,      2 /* block_size*/);
+    convolutional_layer<relu>   C3(12 /* in_width*/, 10 /* out_width*/, 8 /* in_fm*/,  16 /* out_fm*/);
 #define _ false
 #define X true
     const bool connection[] = {
@@ -122,8 +125,8 @@ cnn_training_test_mnist()
 #undef _
 #undef X
     C3.set_connection(connection, 8*16);
-    subsampling_layer<identity>    S4(10 /* in_width*/,  5 /* out_width*/, 16 /*fm*/,      2 /*block_size*/);
-    fullyconnected_layer<identity> O5( 5 /* in_width*/, 10 /* out_width*/, 16 /*in_fm*/);
+    subsampling_layer<identity>    S4(10 /* in_width*/,  5 /* out_width*/, 16 /* fm*/,      2 /* block_size*/);
+    fullyconnected_layer<identity> O5( 5 /* in_width*/, 10 /* out_width*/, 16 /* in_fm*/);
     softmax_layer M6( 10 /* in_dim */);
     nn.add_layer(&C1);
     nn.add_layer(&S2);
@@ -138,7 +141,7 @@ cnn_training_test_mnist()
     int last_label = 0;
     for(int s=0; s<steps; s++) {
         
-        std::cout<<"Step "<<s<<"\n";
+        //std::cout<<"Step "<<s<<"\n";
         
         if (s!=0 && s%1000==0)
             nn.set_learning_rate(nn.learning_rate()*0.85);
@@ -153,20 +156,19 @@ cnn_training_test_mnist()
 
         nn::float_t error = nn.error(soll);
 
-        for (int o=0; o<soll.size(); o++) {
-            std::cout<<"   ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
-        }
-        std::cout<<"   error "<<error<<"\n";
+        //for (int o=0; o<soll.size(); o++) {
+        //    std::cout<<"   ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
+        //}
+        //std::cout<<"   error "<<error<<"\n";
 
         nn.backward(mnist_train.image(num_example).data(), soll);
 
-#if 0
+#if 1
         /* test on mnist test set */
         if( s!=0 && s%10000==0 ) {
             mnist_rate(nn);
         }
-#endif
-        
+#else
         if ( s%10000 < 100 ) {
 
             cv::Mat img(cv::Size(400,200), CV_8UC1, 100);
@@ -201,6 +203,7 @@ cnn_training_test_mnist()
 #endif            
             while(cv::waitKey(0)!=27);
         }
+#endif
     }
 }
 
@@ -209,10 +212,18 @@ main(int argc, const char *argv[])
 {
 
 #if GRADIENT_CHECK
-    std::cout<<"Compiled with gradient checking (GRADIENT_CHECK is 1).\n";
+    std::cout<<"Compiled with GRADIENT_CHECK enabled.\n";
     //gc_fullyconnected();
     //gc_cnn_training();
     //gc_cnn_training_fc2d();
+#endif
+
+#if POOLING_AVG
+    std::cout<<"Compiled with POOLING_AVG enabled.\n";
+#elif POOLING_MAX
+    std::cout<<"Compiled with POOLING_MAX enabled.\n";
+#else
+    std::cout<<"Warning: no pooling method enabled.\n";
 #endif
 
     //fullyconnected_test();

@@ -4,9 +4,12 @@
   * RBM pretraining import weights
 * CDBN
 
+## Comments
+* Adadelta (Zeiler 2012) implemented, Problem with softmax log(0)
+
+
 ## Nice to hace
 
-* Adadelta
 * loading and saving of networks
 
 ## Optional

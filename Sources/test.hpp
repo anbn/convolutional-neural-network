@@ -3,7 +3,7 @@
 
 namespace nn {
 
-#if GRADIENT_CHECK
+#if TRAINING_GRADIENT_CHECK
 void
 gc_fullyconnected()
 {

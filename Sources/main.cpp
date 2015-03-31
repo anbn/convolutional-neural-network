@@ -3,10 +3,12 @@
 
 #include <opencv2/highgui/highgui.hpp>
 
-#define GRADIENT_CHECK  0
-
 #define POOLING_AVG     1
 #define POOLING_MAX     0
+
+#define TRAINING_GRADIENT_CHECK  0
+#define TRAINING_MOMENTUM        0
+#define TRAINING_ADADELTA        1
 
 #define VERBOSE         0
 
@@ -135,35 +137,37 @@ cnn_training_test_mnist()
     nn.add_layer(&O5);
     nn.add_layer(&M6);
     
+#if TRAINING_MOMENTUM
     nn.set_learning_rate(0.00085);
-    
+#endif
     vec_t soll {0,0,0,0,0,0,0,0,0,0};
     int last_label = 0;
     for(int s=0; s<steps; s++) {
         
-        //std::cout<<"Step "<<s<<"\n";
         
+#if TRAINING_MOMENTUM
         if (s!=0 && s%1000==0)
             nn.set_learning_rate(nn.learning_rate()*0.85);
+#endif
         
         int num_example = s % mnist_train.num_examples();
 
         nn.forward(mnist_train.image(num_example).data());
         
-        soll[last_label] =  0;
+        soll[last_label] =  0.0;
         last_label = mnist_train.label(num_example);
-        soll[last_label] =  1;
+        soll[last_label] =  1.0;
 
         nn::float_t error = nn.error(soll);
 
-        //for (int o=0; o<soll.size(); o++) {
-        //    std::cout<<"   ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
-        //}
-        //std::cout<<"   error "<<error<<"\n";
+        std::cout<<"Step "<<s<<"\n";
+        for (int o=0; o<soll.size(); o++)
+            std::cout<<"   ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
+        std::cout<<"   error "<<error<<"\n";
 
         nn.backward(mnist_train.image(num_example).data(), soll);
 
-#if 1
+#if 0
         /* test on mnist test set */
         if( s!=0 && s%10000==0 ) {
             mnist_rate(nn);
@@ -211,7 +215,7 @@ int
 main(int argc, const char *argv[])
 {
 
-#if GRADIENT_CHECK
+#if TRAINING_GRADIENT_CHECK
     std::cout<<"Compiled with GRADIENT_CHECK enabled.\n";
     //gc_fullyconnected();
     //gc_cnn_training();
@@ -224,6 +228,16 @@ main(int argc, const char *argv[])
     std::cout<<"Compiled with POOLING_MAX enabled.\n";
 #else
     std::cout<<"Warning: no pooling method enabled.\n";
+#endif
+
+#if TRAINING_GRADIENT_CHECK
+    std::cout<<"Compiled with TRAINING_GRADIENT_CHECK enabled.\n";
+#elif TRAINING_MOMENTUM
+    std::cout<<"Compiled with TRAINING_MOMENTUM enabled.\n";
+#elif TRAINING_ADADELTA
+    std::cout<<"Compiled with TRAINING_ADADELTA enabled.\n";
+#else
+    std::cout<<"Warning: no training method enabled.\n";
 #endif
 
     //fullyconnected_test();

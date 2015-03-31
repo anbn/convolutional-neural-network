@@ -24,6 +24,7 @@ public:
         return last_layer_->output();
     }
 
+# if TRAINING_MOMENTUM
     void set_learning_rate(float_t learning_rate) {
         assert(first_layer_!=nullptr);
 
@@ -38,6 +39,7 @@ public:
         assert(first_layer_!=nullptr);
         return first_layer_->learning_rate();
     }
+#endif
     
     void add_layer(layer* l) {
         assert(l!=nullptr);
@@ -85,7 +87,7 @@ public:
         } while(l!=nullptr);
     }
 
-# if GRADIENT_CHECK
+# if TRAINING_GRADIENT_CHECK
     void gc_check_weights(const vec_t& in, const vec_t& soll, layer* gc_layer) {
        
         const nn::float_t gc_epsilon = 0.00001;

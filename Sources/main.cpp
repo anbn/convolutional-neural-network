@@ -10,6 +10,8 @@
 #define TRAINING_MOMENTUM        0
 #define TRAINING_ADADELTA        1
 
+#define BATCH_SIZE               0
+
 #define VERBOSE         0
 
 #include "network.hpp"
@@ -17,6 +19,7 @@
 #include "mnist_reader.hpp"
 #include "orl_reader.hpp"
 #include "test.hpp"
+#include "gnuplot.hpp"
 
 using namespace nn;
 
@@ -95,6 +98,7 @@ nn::float_t mnist_rate(neural_network &nn)
         } else {
             w++;
         }
+
     }
     nn::float_t rate = ((nn::float_t) c)/(c+w);
     std::cout<<"mnist_rate(...): "<<c<<" correct, "<<w<<" false ("<<rate<<")\n";
@@ -104,9 +108,11 @@ nn::float_t mnist_rate(neural_network &nn)
 void
 cnn_training_test_mnist()
 {
-    const int steps = 100000;
+    const int steps = 100001;
     mnist_reader mnist_train;
-    mnist_train.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 60000);
+    mnist_train.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 0);
+    gnuplot gp("error.txt");
+    gp.init_plot("error");
 
     neural_network nn;
     convolutional_layer<relu>   C1(28 /* in_width*/, 24 /* out_width*/, 1 /* in_fm*/,   8 /* out_fm*/);
@@ -160,14 +166,15 @@ cnn_training_test_mnist()
 
         nn::float_t error = nn.error(soll);
 
-        std::cout<<"Step "<<s<<"\n";
-        for (int o=0; o<soll.size(); o++)
-            std::cout<<"   ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
-        std::cout<<"   error "<<error<<"\n";
+        //std::cout<<"Step "<<s<<"\n";
+        //for (int o=0; o<soll.size(); o++)
+        //    std::cout<<"   ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
+        //std::cout<<"   error "<<error<<"\n";
 
+        gp.plot_point(error);
         nn.backward(mnist_train.image(num_example).data(), soll);
 
-#if 0
+#if 1
         /* test on mnist test set */
         if( s!=0 && s%10000==0 ) {
             mnist_rate(nn);
@@ -209,12 +216,14 @@ cnn_training_test_mnist()
         }
 #endif
     }
+    gp.finish_plot();
 }
 
 int
 main(int argc, const char *argv[])
 {
-
+    std::cout<<"NeuralNetwork, compiled "<<__DATE__<<" at "<<__TIME__<<"\n";
+    
 #if TRAINING_GRADIENT_CHECK
     std::cout<<"Compiled with GRADIENT_CHECK enabled.\n";
     //gc_fullyconnected();

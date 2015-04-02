@@ -5,6 +5,7 @@ data/
 
 *.md.html
 
+*.txt
 *.png
 *.jpg
 

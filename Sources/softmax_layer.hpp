@@ -49,7 +49,7 @@ public:
         return output_[fm] - (*soll_)[fm];
     }
 
-    void backward(const vec_t& in) {
+    void backward(const vec_t& in, bool update) {
 #if VERBOSE
         std::cout<<"(backwardsoftmax) ";
 #endif

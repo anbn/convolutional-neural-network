@@ -59,7 +59,7 @@ public:
     }
 
     /* backpropagation for any layer */
-    void backward(const vec_t& in) {
+    void backward(const vec_t& in, bool is_update) {
 #if VERBOSE
         std::cout<<"(backwardfully) ";
 #endif
@@ -80,48 +80,51 @@ public:
                 for (uint_t iy=0; iy<in_width_; iy++) {
                     for (uint_t in_fm=0; in_fm<in_feature_maps_; in_fm++) {
                         uint_t idx = ((o*in_feature_maps_ + in_fm)*in_width_ + ix)*in_width_ + iy;
-                        float_t gradient = delta_[o] * in[(in_fm*in_width_ + ix)*in_width_ + iy];
-#if TRAINING_GRADIENT_CHECK
-                        gc_gradient_weights_[idx] = gradient; 
+                        batch_gradient_weights_[idx] += delta_[o] * in[(in_fm*in_width_ + ix)*in_width_ + iy];
+
+                        if ( is_update ) {
+                            batch_gradient_weights_[o] = batch_gradient_weights_[o]/BATCH_SIZE;
+#if GRADIENT_CHECK
+                            gc_gradient_weights_[idx] = batch_gradient_weights_[idx]; 
 #elif TRAINING_MOMENTUM
-                        float_t w = weights_[idx];
-                        weights_[idx] = weights_[idx]
-                            - learning_rate_ * gradient
-                            + momentum_ * mom_weights_[idx]
-                            - learning_rate_ * decay_ * weights_[idx];
-                        mom_weights_[idx] = weights_[idx] - w;
+                            float_t w = weights_[idx];
+                            weights_[idx] = weights_[idx]
+                                - learning_rate_ * batch_gradient_weights_[idx]
+                                + momentum_ * mom_weights_[idx]
+                                - learning_rate_ * decay_ * weights_[idx];
+                            mom_weights_[idx] = weights_[idx] - w;
 #elif TRAINING_ADADELTA
-                        /* accumulate gradient */
-                        ad_acc_gradient_weights_[idx] = ad_ro_*ad_acc_gradient_weights_[idx] + (1-ad_ro_)*gradient*gradient;
-                        /* compute update */
-                        float_t ad_update = - sqrt((ad_acc_updates_weights_[idx]+ad_epsilon_)/(ad_acc_gradient_weights_[idx]+ad_epsilon_)) * gradient;
-                        /* accumulate updates */
-                        ad_acc_updates_weights_[idx] = ad_ro_*ad_acc_updates_weights_[idx] + (1-ad_ro_)*ad_update*ad_update;
-                        /* apply update */
-                        weights_[idx] = weights_[idx]+ad_update;
+                            ad_acc_gradient_weights_[idx] = ad_ro_*ad_acc_gradient_weights_[idx] + (1.0-ad_ro_)*batch_gradient_weights_[idx]*batch_gradient_weights_[idx];
+                            float_t ad_update = - sqrt((ad_acc_updates_weights_[idx]+ad_epsilon_)/(ad_acc_gradient_weights_[idx]+ad_epsilon_)) * batch_gradient_weights_[idx];
+                            ad_acc_updates_weights_[idx] = ad_ro_*ad_acc_updates_weights_[idx] + (1.0-ad_ro_)*ad_update*ad_update;
+                            weights_[idx] = weights_[idx]+ad_update;
 #endif
+                            batch_gradient_weights_[idx] = 0.0;
+                        } 
                     }
                 }
             }
-#if TRAINING_GRADIENT_CHECK
-            gc_gradient_bias_[o] = delta_[o] * 1.0;
+            batch_gradient_bias_[o] += delta_[o] * 1.0;
+
+            if ( is_update ) {
+                batch_gradient_bias_[o] = batch_gradient_bias_[o]/BATCH_SIZE;
+#if GRADIENT_CHECK
+                gc_gradient_bias_[o] = batch_gradient_bias_[o];
 #elif TRAINING_MOMENTUM
-            float_t b = bias_[o];
-            bias_[o] = bias_[o]
-                - learning_rate_ * delta_[o] * 1.0
-                + momentum_*mom_bias_[o];
-                - learning_rate_ * decay_ * bias_[o];
-            mom_bias_[o] = bias_[o] - b;
+                float_t b = bias_[o];
+                bias_[o] = bias_[o]
+                    - learning_rate_ * batch_gradient_bias_[o]
+                    + momentum_*mom_bias_[o]
+                    - learning_rate_ * decay_ * bias_[o];
+                mom_bias_[o] = bias_[o] - b;
 #elif TRAINING_ADADELTA
-            /* accumulate gradient */
-            ad_acc_gradient_bias_[o] = ad_ro_*ad_acc_gradient_bias_[o] + (1-ad_ro_)*delta_[o]*delta_[o];
-            /* compute update */
-            float_t ad_update = - sqrt((ad_acc_updates_bias_[o]+ad_epsilon_)/(ad_acc_gradient_bias_[o]+ad_epsilon_)) * delta_[o];
-            /* accumulate updates */
-            ad_acc_updates_bias_[o] = ad_ro_*ad_acc_updates_bias_[o] + (1-ad_ro_)*ad_update*ad_update;
-            /* apply update */
-            bias_[o] = bias_[o]+ad_update;
+                ad_acc_gradient_bias_[o] = ad_ro_*ad_acc_gradient_bias_[o] + (1.0-ad_ro_)*batch_gradient_bias_[o]*batch_gradient_bias_[o];
+                float_t ad_update = - sqrt((ad_acc_updates_bias_[o]+ad_epsilon_)/(ad_acc_gradient_bias_[o]+ad_epsilon_)) * batch_gradient_bias_[o];
+                ad_acc_updates_bias_[o] = ad_ro_*ad_acc_updates_bias_[o] + (1.0-ad_ro_)*ad_update*ad_update;
+                bias_[o] = bias_[o]+ad_update;
 #endif
+                batch_gradient_bias_[o] = 0.0;
+            }
         }
     }
 

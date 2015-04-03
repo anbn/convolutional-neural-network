@@ -78,16 +78,22 @@ public:
         output_layer *last = dynamic_cast<output_layer*>(last_layer_);
         assert(last != nullptr);
 
+        --batch_counter_;
+        
         last->set_soll(&soll);
         
         layer* l = last_layer_;
         do {
-            l->backward(l->prev_layer()==nullptr? in : l->prev_layer()->output());
+            l->backward(l->prev_layer()==nullptr? in : l->prev_layer()->output(), batch_counter_==0);
             l = l->prev_layer();
         } while(l!=nullptr);
+
+        if ( batch_counter_ == 0 ) {
+            batch_counter_ = BATCH_SIZE;
+        }
     }
 
-# if TRAINING_GRADIENT_CHECK
+# if GRADIENT_CHECK
     void gc_check_weights(const vec_t& in, const vec_t& soll, layer* gc_layer) {
        
         const nn::float_t gc_epsilon = 0.00001;
@@ -154,6 +160,8 @@ private:
 
     layer *first_layer_ = nullptr;
     layer *last_layer_ = nullptr;
+
+    uint batch_counter_ = BATCH_SIZE;
 };
 
 

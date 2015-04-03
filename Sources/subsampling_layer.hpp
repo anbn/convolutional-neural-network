@@ -62,7 +62,7 @@ public:
         return delta_[(fm*out_width_ + ix/2)*out_width_ + iy/2] * weights_[fm];
     }
     
-    void backward(const vec_t& in) {
+    void backward(const vec_t& in, bool is_update) {
 #if VERBOSE
         std::cout<<"(backwardsub) ";
 #endif
@@ -100,42 +100,42 @@ public:
                 }
             }
 
-#if TRAINING_GRADIENT_CHECK
-            gc_gradient_weights_[fm] = sum;
-            gc_gradient_bias_[fm] = sum_delta;
+            batch_gradient_weights_[fm] += sum;
+            batch_gradient_bias_[fm] += sum_delta;
+
+            if ( is_update ) {
+#if GRADIENT_CHECK
+                gc_gradient_weights_[fm] = sum;
+                gc_gradient_bias_[fm] = sum_delta;
 #elif TRAINING_MOMENTUM
-            float_t w = weights_[fm];
-            weights_[fm] = weights_[fm]
-                           - learning_rate_*sum
-                           + momentum_ * mom_weights_[fm]
-                           - learning_rate_ * decay_ * weights_[fm];
-            mom_weights_[fm] = weights_[fm] - w;
+                float_t w = weights_[fm];
+                weights_[fm] = weights_[fm]
+                    - learning_rate_*sum
+                    + momentum_ * mom_weights_[fm]
+                    - learning_rate_ * decay_ * weights_[fm];
+                mom_weights_[fm] = weights_[fm] - w;
 
-            float_t b = bias_[fm];
-            bias_[fm] = bias_[fm]
-                        - learning_rate_ * sum_delta
-                        + momentum_ * mom_bias_[fm]
-                        - learning_rate_ * decay_ * bias_[fm];
-            mom_bias_[fm] = bias_[fm] - b;
+                float_t b = bias_[fm];
+                bias_[fm] = bias_[fm]
+                    - learning_rate_ * sum_delta
+                    + momentum_ * mom_bias_[fm]
+                    - learning_rate_ * decay_ * bias_[fm];
+                mom_bias_[fm] = bias_[fm] - b;
 #elif TRAINING_ADADELTA
-            /* accumulate gradient */
-            ad_acc_gradient_weights_[fm] = ad_ro_*ad_acc_gradient_weights_[fm] + (1-ad_ro_)*sum*sum;
-            /* compute update */
-            float_t ad_update = - sqrt((ad_acc_updates_weights_[fm]+ad_epsilon_)/(ad_acc_gradient_weights_[fm]+ad_epsilon_)) * sum;
-            /* accumulate updates */
-            ad_acc_updates_weights_[fm] = ad_ro_*ad_acc_updates_weights_[fm] + (1-ad_ro_)*ad_update*ad_update;
-            /* apply update */
-            weights_[fm] = weights_[fm]+ad_update;
+                ad_acc_gradient_weights_[fm] = ad_ro_*ad_acc_gradient_weights_[fm] + (1-ad_ro_)*sum*sum;
+                float_t ad_update = - sqrt((ad_acc_updates_weights_[fm]+ad_epsilon_)/(ad_acc_gradient_weights_[fm]+ad_epsilon_)) * sum;
+                ad_acc_updates_weights_[fm] = ad_ro_*ad_acc_updates_weights_[fm] + (1-ad_ro_)*ad_update*ad_update;
+                weights_[fm] = weights_[fm]+ad_update;
 
-            /* accumulate gradient */
-            ad_acc_gradient_bias_[fm] = ad_ro_*ad_acc_gradient_bias_[fm] + (1-ad_ro_)*sum_delta*sum_delta;
-            /* compute update */
-            ad_update = - sqrt((ad_acc_updates_bias_[fm]+ad_epsilon_)/(ad_acc_gradient_bias_[fm]+ad_epsilon_)) * sum_delta;
-            /* accumulate updates */
-            ad_acc_updates_bias_[fm] = ad_ro_*ad_acc_updates_bias_[fm] + (1-ad_ro_)*ad_update*ad_update;
-            /* apply update */
-            bias_[fm] = bias_[fm]+ad_update;
+                ad_acc_gradient_bias_[fm] = ad_ro_*ad_acc_gradient_bias_[fm] + (1-ad_ro_)*sum_delta*sum_delta;
+                ad_update = - sqrt((ad_acc_updates_bias_[fm]+ad_epsilon_)/(ad_acc_gradient_bias_[fm]+ad_epsilon_)) * sum_delta;
+                ad_acc_updates_bias_[fm] = ad_ro_*ad_acc_updates_bias_[fm] + (1-ad_ro_)*ad_update*ad_update;
+                bias_[fm] = bias_[fm]+ad_update;
 #endif
+                batch_gradient_weights_[fm] = 0.0;
+                batch_gradient_bias_[fm] = 0.0;
+
+            }
         }
     }
 

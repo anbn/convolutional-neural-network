@@ -24,7 +24,6 @@ public:
         std::cout<<"Reading mnist... ";
         
         if (num == 0 || num > 60000) {
-            std::cout<<"\nSetting number of images to maximum of 60000.\n";
             num = 60000;
         }
 

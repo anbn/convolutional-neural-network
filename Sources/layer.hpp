@@ -23,6 +23,8 @@ public:
     void resetWeights() {
         randomize(std::begin(weights_), std::end(weights_), -0.5, 0.5);
         randomize(std::begin(bias_), std::end(bias_), -0.0, 0.0);
+        std::fill(std::begin(batch_gradient_weights_), std::end(batch_gradient_weights_),0);
+        std::fill(std::begin(batch_gradient_bias_), std::end(batch_gradient_bias_),0);
     }
 
     void set_next_layer(layer* next_layer) { 
@@ -41,17 +43,18 @@ public:
     
     virtual float_t in_delta_sum(uint_t fm, uint_t ix, uint_t iy) const = 0;
     virtual void forward(const vec_t& in) = 0;
-    virtual void backward(const vec_t& in) = 0;
+    virtual void backward(const vec_t& in, bool is_update) = 0;
 
-#if TRAINING_GRADIENT_CHECK
+#if GRADIENT_CHECK
     float_t gc_gradient_weights(uint_t i) const { return gc_gradient_weights_[i]; }
     float_t gc_gradient_bias(uint_t i) const { return gc_gradient_bias_[i]; }
     float_t get_weight(uint_t i) const { return weights_[i]; }
     void    set_weight(uint_t i, float_t v) { weights_[i] = v; }
     float_t get_bias(uint_t i) const { return bias_[i]; }
     void    set_bias(uint_t i, float_t v) { bias_[i] = v; }
+#endif
 
-#elif TRAINING_MOMENTUM
+#if TRAINING_MOMENTUM
     float_t learning_rate() { return learning_rate_; }
     float_t momentum() { return momentum_; }
     float_t decay() { return decay_; }
@@ -68,13 +71,17 @@ protected:
         output_.resize(out_dim_);
         bias_.resize(bias_dim);
         delta_.resize(out_dim_);
+        batch_gradient_weights_.resize(weights_dim);
+        batch_gradient_bias_.resize(bias_dim);
+
         resetWeights();
 
-#if TRAINING_GRADIENT_CHECK
+#if GRADIENT_CHECK
         gc_gradient_weights_.resize(weights_dim);
         gc_gradient_bias_.resize(bias_dim);
-        
-#elif TRAINING_MOMENTUM
+#endif        
+
+#if TRAINING_MOMENTUM
         mom_weights_.resize(weights_dim);
         mom_bias_.resize(bias_dim);
         
@@ -102,11 +109,15 @@ protected:
     layer* next_layer_ = nullptr;
     layer* prev_layer_ = nullptr;
 
-#if TRAINING_GRADIENT_CHECK
+    vec_t batch_gradient_weights_;
+    vec_t batch_gradient_bias_;
+
+#if GRADIENT_CHECK
     vec_t gc_gradient_weights_,
           gc_gradient_bias_;
+#endif
 
-#elif TRAINING_MOMENTUM
+#if TRAINING_MOMENTUM
     /* learning parameters for SGD with momentum and decay */
     float_t learning_rate_ = 0.01;
     float_t momentum_ = 0.9;

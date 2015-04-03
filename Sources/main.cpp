@@ -3,16 +3,18 @@
 
 #include <opencv2/highgui/highgui.hpp>
 
-#define POOLING_AVG     1
-#define POOLING_MAX     0
+#define GRADIENT_CHECK  0
 
-#define TRAINING_GRADIENT_CHECK  0
-#define TRAINING_MOMENTUM        0
-#define TRAINING_ADADELTA        1
+#define POOLING_AVG         1
+#define POOLING_MAX         0 // GRADIENT_CHECK fails!
 
-#define BATCH_SIZE               0
 
-#define VERBOSE         0
+#define TRAINING_MOMENTUM   1
+#define TRAINING_ADADELTA   0
+
+#define BATCH_SIZE         10
+
+#define VERBOSE             0
 
 #include "network.hpp"
 #include "image.hpp"
@@ -33,6 +35,9 @@ void print_vec(vec_t v) {
 void
 fullyconnected_test()
 {
+    gnuplot gp("error.txt");
+    gp.init_plot("error_fct");
+    
     fullyconnected_layer<tan_h> L1(4,8);
     fullyconnected_layer<tan_h> L2(8,6);
     fullyconnected_layer<tan_h> L3(6,5);
@@ -70,6 +75,7 @@ fullyconnected_test()
             std::cout<<"IST   "; print_vec(nn.output());
         }
         std::cout<< s << "   error: "<<error<<" \t("<<moving_error<<")\n";
+        gp.plot_point(error);
 
         nn.backward(input, soll);
 
@@ -111,8 +117,8 @@ cnn_training_test_mnist()
     const int steps = 100001;
     mnist_reader mnist_train;
     mnist_train.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 0);
-    gnuplot gp("error.txt");
-    gp.init_plot("error");
+    //gnuplot gp("error.txt");
+    //gp.init_plot("error");
 
     neural_network nn;
     convolutional_layer<relu>   C1(28 /* in_width*/, 24 /* out_width*/, 1 /* in_fm*/,   8 /* out_fm*/);
@@ -171,10 +177,10 @@ cnn_training_test_mnist()
         //    std::cout<<"   ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
         //std::cout<<"   error "<<error<<"\n";
 
-        gp.plot_point(error);
+        //gp.plot_point(error);
         nn.backward(mnist_train.image(num_example).data(), soll);
 
-#if 1
+#if 0
         /* test on mnist test set */
         if( s!=0 && s%10000==0 ) {
             mnist_rate(nn);
@@ -216,35 +222,36 @@ cnn_training_test_mnist()
         }
 #endif
     }
-    gp.finish_plot();
+    //gp.finish_plot();
 }
 
 int
 main(int argc, const char *argv[])
 {
     std::cout<<"NeuralNetwork, compiled "<<__DATE__<<" at "<<__TIME__<<"\n";
+    std::cout<<"  BATCH_SIZE is "<<BATCH_SIZE<<"\n";
     
-#if TRAINING_GRADIENT_CHECK
-    std::cout<<"Compiled with GRADIENT_CHECK enabled.\n";
-    //gc_fullyconnected();
+#if GRADIENT_CHECK
+    std::cout<<"  GRADIENT_CHECK enabled.\n";
+    assert(BATCH_SIZE==1);
+    gc_fullyconnected();
     //gc_cnn_training();
     //gc_cnn_training_fc2d();
+    return 0;
 #endif
 
 #if POOLING_AVG
-    std::cout<<"Compiled with POOLING_AVG enabled.\n";
+    std::cout<<"  POOLING_AVG is enabled.\n";
 #elif POOLING_MAX
-    std::cout<<"Compiled with POOLING_MAX enabled.\n";
+    std::cout<<"  POOLING_MAX is enabled.\n";
 #else
     std::cout<<"Warning: no pooling method enabled.\n";
 #endif
 
-#if TRAINING_GRADIENT_CHECK
-    std::cout<<"Compiled with TRAINING_GRADIENT_CHECK enabled.\n";
-#elif TRAINING_MOMENTUM
-    std::cout<<"Compiled with TRAINING_MOMENTUM enabled.\n";
+#if TRAINING_MOMENTUM
+    std::cout<<"  TRAINING_MOMENTUM is enabled.\n";
 #elif TRAINING_ADADELTA
-    std::cout<<"Compiled with TRAINING_ADADELTA enabled.\n";
+    std::cout<<"  TRAINING_ADADELTA is enabled.\n";
 #else
     std::cout<<"Warning: no training method enabled.\n";
 #endif

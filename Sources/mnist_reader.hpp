@@ -17,6 +17,12 @@ public:
     const Image<float_t>& image(uint_t n) { return images_[n]; }
     int   label(uint_t n) { return labels_[n]; }
 
+    const Image<float_t> image_cropped(uint_t n, uint_t x, uint_t y, uint_t w, uint_t h) {
+        return images_[n].crop(x,y,w,h);
+    }
+    const Image<float_t> image_shifted(uint_t n, int shift_x, int shift_y) {
+        return images_[n].shift(shift_x, shift_y, -1);
+    }
     mnist_reader() : num_examples_(0) {}
 
 
@@ -94,15 +100,16 @@ private:
 };
 
 
-
-
 void mnist_reader_test() {
     mnist_reader mnist;
     mnist.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 15);
 
     for (int i=0; i<mnist.num_examples(); i++) {
-        Image<nn::float_t> img = mnist.image(i);
-        cv::imshow("mnist["+std::to_string(i)+"]: "+std::to_string(mnist.label(i)), img.toIntensity(-1,1).exportMat());
+        Image<nn::float_t> img = mnist.image_shifted(i, -5, 10);
+        cv::imshow("mnist["+std::to_string(i)+"]: " + 
+                    std::to_string(mnist.label(i)) + 
+                    " ("+std::to_string(img.width())+"x"+std::to_string(img.height())+")",
+                    img.toIntensity(-1,1).exportMat());
         while(cv::waitKey(0)!=27);
     }
 }

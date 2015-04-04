@@ -117,8 +117,8 @@ cnn_training_test_mnist()
     const int steps = 100001;
     mnist_reader mnist_train;
     mnist_train.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 0);
-    //gnuplot gp("error.txt");
-    //gp.init_plot("error");
+    gnuplot gp("error.txt");
+    gp.init_plot("error");
 
     neural_network nn;
     convolutional_layer<relu>   C1(28 /* in_width*/, 24 /* out_width*/, 1 /* in_fm*/,   8 /* out_fm*/);
@@ -164,7 +164,9 @@ cnn_training_test_mnist()
         
         int num_example = s % mnist_train.num_examples();
 
-        nn.forward(mnist_train.image(num_example).data());
+        int shift_x = get_random(-2.0,2.0);
+        int shift_y = get_random(-2.0,2.0);
+        nn.forward(mnist_train.image_shifted(num_example, shift_x, shift_y).data());
         
         soll[last_label] =  0.0;
         last_label = mnist_train.label(num_example);
@@ -177,7 +179,7 @@ cnn_training_test_mnist()
         //    std::cout<<"   ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
         //std::cout<<"   error "<<error<<"\n";
 
-        //gp.plot_point(error);
+        gp.plot_point(error);
         nn.backward(mnist_train.image(num_example).data(), soll);
 
 #if 0
@@ -222,7 +224,7 @@ cnn_training_test_mnist()
         }
 #endif
     }
-    //gp.finish_plot();
+    gp.finish_plot();
 }
 
 int

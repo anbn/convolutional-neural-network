@@ -15,7 +15,7 @@ public:
             in_width_(in_width), out_width_(out_width)
     {
 
-        std::cout<<"DEBUG: subsampling_layer(" <<in_width_<<","<<out_width_<<","<<feature_maps_<<","<<block_size_<<")\n";
+        std::cout<<"DEBUG: subsampling_layer(" <<in_width_<<","<<out_width_<<","<<feature_maps_<<","<<block_size_<<") block_size:"<<block_size_<<"\n";
         
         assert(in_width == out_width*block_size);
     }

@@ -10,7 +10,7 @@ typedef double float_t;
 typedef std::vector<float_t> vec_t;
 
 template<typename T>
-inline T randomize(T min, T max) {
+inline T get_random(T min, T max) {
     static std::mt19937 mt_rand((0));
     std::uniform_real_distribution<T> dst(min, max);
     return dst(mt_rand);
@@ -19,7 +19,7 @@ inline T randomize(T min, T max) {
 template<typename Iter>
 void randomize(Iter begin, Iter end, float_t min, float_t max) {
     for (Iter it = begin; it != end; ++it) 
-        *it = randomize(min, max);
+        *it = get_random(min, max);
 }
 
 template <typename T>

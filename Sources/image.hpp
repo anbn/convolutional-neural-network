@@ -18,17 +18,16 @@ public:
         data_(width * height, 0)
     {}
    
-    Image(uint_t width, uint_t height, std::vector<T> data)
+    Image(uint_t width, uint_t height, const std::vector<T> &data)
         : width_(width), height_(height)
     {
         data_.resize(width_*height_);
         std::copy(std::begin(data), std::end(data), std::begin(data_));
     }
-
     template <typename AccessIterator>
     Image(uint_t width, uint_t height, AccessIterator iter_begin, AccessIterator iter_end)
         : width_(width), height_(height),
-        data_(width * height, 0)
+        data_(width * height)
     {
         data_.resize(width_*height_);
         std::copy(iter_begin, iter_end, std::begin(data_));
@@ -60,7 +59,7 @@ public:
         std::fill(data_.begin(), data_.end(), value);
     }
 
-    void crop(uint_t x, uint_t y, uint_t w, uint_t h) {
+    Image<T> crop(uint_t x, uint_t y, uint_t w, uint_t h) {
         assert((x+w < width_) && (y+h < height_));
         
         std::vector<T> new_data(w*h);
@@ -70,9 +69,21 @@ public:
                 new_data[ny * w + nx] = data_[(y+ny) * width_ + (x+nx)];
             }
         }
-        data_ = std::move(new_data);
-        width_ = w;
-        height_ = h;
+        return Image<T>(w,h,new_data);
+    }
+    
+    Image<T> shift(int shift_x, int shift_y, T fill) {
+        
+        std::vector<T> new_data(width_*height_);
+
+        for (int x=0; x<width_; x++) {
+            for (int y=0; y<height_; y++) {
+                const int px = x-shift_x;
+                const int py = y-shift_y;
+                new_data[y * width_ + x] = (0<=px && px<width_) && (0<=py && py<height_) ? data_[ py * width_ + px] : fill;
+            }
+        }
+        return Image<T>(width_, height_, new_data);
     }
 
     void subsample(float_t scale) {

@@ -77,8 +77,8 @@ public:
         std::cout<<"Generating counterexmaples... ";
 
         for (int n=0; n<num; n++) {
-            int x = randomize(0.0, (double)(img.width()-dim));
-            int y = randomize(0.0, (double)(img.height()-dim));
+            int x = get_random(0.0, (double)(img.width()-dim));
+            int y = get_random(0.0, (double)(img.height()-dim));
 
             std::vector<float_t> data(dim*dim);
             for (int h=0; h<dim; h++) {

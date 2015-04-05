@@ -23,7 +23,7 @@ public:
         pool_val_.resize(out_dim_);
 
 #if POOLING_MAX
-        mask_is_max.resize(in_width_);
+        is_max_mask_.resize(in_dim_);
 #endif
     }
 
@@ -35,21 +35,25 @@ public:
             
             for (uint_t ox=0; ox<out_width_; ox++) {
                 for (uint_t oy=0; oy<out_width_; oy++) {
-
-#if POOLING_AVG
                     float_t val = 0.0;
+#if POOLING_AVG
                     for (uint_t bx=0; bx<block_size_; bx++) {
                         for (uint_t by=0; by<block_size_; by++) {
                             val += in[(fm*in_width_ + (block_size_*ox+bx))*in_width_ + (block_size_*oy+by)];
                         }
                     }
 #elif POOLING_MAX
-                    float_t val = in[(fm*in_width_ + (block_size_*ox+0))*in_width_ + (block_size_*oy+0)];
+                    uint_t max_idx = (fm*in_width_ + (block_size_*ox+0))*in_width_ + (block_size_*oy+0);
                     for (uint_t bx=0; bx<block_size_; bx++) {
                         for (uint_t by=0; by<block_size_; by++) {
-                            val = std::max(val, in[(fm*in_width_ + (block_size_*ox+bx))*in_width_ + (block_size_*oy+by)]);
+                            uint_t idx = (fm*in_width_ + (block_size_*ox+bx))*in_width_ + (block_size_*oy+by);
+                            if (in[max_idx] < in[idx])
+                                max_idx = idx;
+                            is_max_mask_[idx] = false;
                         }
                     }
+                    is_max_mask_[max_idx] = true;
+                    val = in[max_idx];
 #else
                     std::cout<<"Error: no pooling method defined.\n";
                     exit(1);
@@ -68,10 +72,10 @@ public:
         assert(ix < in_width_);
         assert(iy < in_width_);
 #if POOLING_AVG        
-        return delta_[(fm*out_width_ + ix/2)*out_width_ + iy/2] * weights_[fm];
+        return delta_[(fm*out_width_ + ix/block_size_)*out_width_ + iy/block_size_] * weights_[fm];
 #elif POOLING_MAX
-        return mask_is_max[(fm*in_width_ + ix)*in_width_ + iy] ? 
-                delta_[(fm*out_width_ + ix/2)*out_width_ + iy/2] * weights_[fm] : 0.0;
+        return is_max_mask_[(fm*in_width_ + ix)*in_width_ + iy] ? 
+                delta_[(fm*out_width_ + ix/block_size_)*out_width_ + iy/block_size_] * weights_[fm] : 0.0;
 #endif
     }
     
@@ -144,7 +148,7 @@ private:
     vec_t pool_val_;
 
 #if POOLING_MAX
-    std::vector<bool> mask_is_max;
+    std::vector<bool> is_max_mask_;
 #endif
 
 };

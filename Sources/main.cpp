@@ -3,18 +3,22 @@
 
 #include <opencv2/highgui/highgui.hpp>
 
-#define GRADIENT_CHECK  1
+/*- DEBUGGING ----------------------------------------------------------------*/
 
-#define POOLING_AVG         1
-#define POOLING_MAX         0 // GRADIENT_CHECK fails!
+#define VERBOSE             0
+#define GRADIENT_CHECK      0
 
+/*- TRAINING OPTIONS ---------------------------------------------------------*/
+
+#define POOLING_AVG         0
+#define POOLING_MAX         1
 
 #define TRAINING_MOMENTUM   1
 #define TRAINING_ADADELTA   0
 
 #define BATCH_SIZE          1
 
-#define VERBOSE             0
+/*----------------------------------------------------------------------------*/
 
 #include "network.hpp"
 #include "image.hpp"
@@ -174,17 +178,18 @@ cnn_training_test_mnist()
 
         nn::float_t error = nn.error(soll);
 
-        std::cout<<"Step "<<s<<"\n";
-        for (int o=0; o<soll.size(); o++)
-            std::cout<<"   ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
-        std::cout<<"   error "<<error<<"\n";
+        //std::cout<<"Step "<<s<<"\n";
+        //for (int o=0; o<soll.size(); o++)
+        //    std::cout<<"   ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
+        //std::cout<<"   error "<<error<<"\n";
 
         gp.plot_point(error);
         nn.backward(mnist_train.image(num_example).data(), soll);
 
-#if 0
+#if 1
         /* test on mnist test set */
-        if( s!=0 && s%10000==0 ) {
+        if( s!=0 && s%5000==0 ) {
+            std::cout<<"Step "<<s<<"\n";
             mnist_rate(nn);
         }
 #else

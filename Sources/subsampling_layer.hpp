@@ -21,7 +21,6 @@ public:
 
         /* store activation values */
         pool_val_.resize(out_dim_);
-
 #if POOLING_MAX
         is_max_mask_.resize(in_dim_);
 #endif
@@ -54,9 +53,6 @@ public:
                     }
                     is_max_mask_[max_idx] = true;
                     val = in[max_idx];
-#else
-                    std::cout<<"Error: no pooling method defined.\n";
-                    exit(1);
 #endif
                     uint_t idx = (fm*out_width_ + ox)*out_width_ + oy;
                     pool_val_[idx] = val; /* store activation values for backpropagation */

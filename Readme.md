@@ -1,16 +1,13 @@
 # Next Steps
 
-* DBN
-  * RBM pretraining import weights
-* CDBN
-
-## Comments
-* Adadelta (Zeiler 2012) implemented, Problem with softmax log(0)
-
+* Dropout layer
+* implement Stride
 
 ## Nice to have
 
 * loading and saving of networks
+* DBN
+  * RBM pretraining import weights
 
 ## Optional
 

@@ -10,20 +10,20 @@
 
 /*- TRAINING OPTIONS ---------------------------------------------------------*/
 
-#define POOLING_AVG         0
-#define POOLING_MAX         1
+#define POOLING_AVG         1
+#define POOLING_MAX         0
 
 #define TRAINING_MOMENTUM   1
 #define TRAINING_ADADELTA   0
 
-#define BATCH_SIZE          1
+#define BATCH_SIZE         10
 
 /*----------------------------------------------------------------------------*/
 
 #include "network.hpp"
 #include "image.hpp"
 #include "mnist_reader.hpp"
-#include "orl_reader.hpp"
+//#include "orl_reader.hpp"
 #include "test.hpp"
 #include "gnuplot.hpp"
 
@@ -243,7 +243,8 @@ main(int argc, const char *argv[])
 #elif POOLING_MAX
     std::cout<<"  POOLING_MAX is enabled.\n";
 #else
-    std::cout<<"Warning: no pooling method enabled.\n";
+    std::cout<<"Error: no pooling method enabled.\n";
+    exit(1);
 #endif
 
 #if TRAINING_MOMENTUM
@@ -251,15 +252,16 @@ main(int argc, const char *argv[])
 #elif TRAINING_ADADELTA
     std::cout<<"  TRAINING_ADADELTA is enabled.\n";
 #else
-    std::cout<<"Warning: no training method enabled.\n";
+    std::cout<<"Error: no training method enabled.\n";
+    exit(1);
 #endif
     
 #if GRADIENT_CHECK
     std::cout<<"  GRADIENT_CHECK enabled.\n";
     assert(BATCH_SIZE==1);
     //gc_fullyconnected();
-    //gc_cnn_training();
-    gc_cnn_training_fc2d();
+    gc_cnn_training();
+    //gc_cnn_training_fc2d();
     return 0;
 #endif
 

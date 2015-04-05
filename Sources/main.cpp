@@ -3,7 +3,7 @@
 
 #include <opencv2/highgui/highgui.hpp>
 
-#define GRADIENT_CHECK  0
+#define GRADIENT_CHECK  1
 
 #define POOLING_AVG         1
 #define POOLING_MAX         0 // GRADIENT_CHECK fails!
@@ -12,7 +12,7 @@
 #define TRAINING_MOMENTUM   1
 #define TRAINING_ADADELTA   0
 
-#define BATCH_SIZE         10
+#define BATCH_SIZE          1
 
 #define VERBOSE             0
 
@@ -114,7 +114,7 @@ nn::float_t mnist_rate(neural_network &nn)
 void
 cnn_training_test_mnist()
 {
-    const int steps = 100001;
+    const int steps = 100000;
     mnist_reader mnist_train;
     mnist_train.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 0);
     gnuplot gp("error.txt");
@@ -174,10 +174,10 @@ cnn_training_test_mnist()
 
         nn::float_t error = nn.error(soll);
 
-        //std::cout<<"Step "<<s<<"\n";
-        //for (int o=0; o<soll.size(); o++)
-        //    std::cout<<"   ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
-        //std::cout<<"   error "<<error<<"\n";
+        std::cout<<"Step "<<s<<"\n";
+        for (int o=0; o<soll.size(); o++)
+            std::cout<<"   ["<<o<<"]: "<<soll[o]<<" vs "<<nn.output()[o]<<"\n";
+        std::cout<<"   error "<<error<<"\n";
 
         gp.plot_point(error);
         nn.backward(mnist_train.image(num_example).data(), soll);
@@ -188,7 +188,7 @@ cnn_training_test_mnist()
             mnist_rate(nn);
         }
 #else
-        if ( s%10000 < 100 ) {
+        if ( s%5000 < 100 ) {
 
             cv::Mat img(cv::Size(400,200), CV_8UC1, 100);
             Image<nn::float_t> img_in(28, 1*28, std::begin(mnist_train.image(num_example).data()), std::end(mnist_train.image(num_example).data()));
@@ -232,15 +232,6 @@ main(int argc, const char *argv[])
 {
     std::cout<<"NeuralNetwork, compiled "<<__DATE__<<" at "<<__TIME__<<"\n";
     std::cout<<"  BATCH_SIZE is "<<BATCH_SIZE<<"\n";
-    
-#if GRADIENT_CHECK
-    std::cout<<"  GRADIENT_CHECK enabled.\n";
-    assert(BATCH_SIZE==1);
-    gc_fullyconnected();
-    //gc_cnn_training();
-    //gc_cnn_training_fc2d();
-    return 0;
-#endif
 
 #if POOLING_AVG
     std::cout<<"  POOLING_AVG is enabled.\n";
@@ -257,6 +248,16 @@ main(int argc, const char *argv[])
 #else
     std::cout<<"Warning: no training method enabled.\n";
 #endif
+    
+#if GRADIENT_CHECK
+    std::cout<<"  GRADIENT_CHECK enabled.\n";
+    assert(BATCH_SIZE==1);
+    //gc_fullyconnected();
+    //gc_cnn_training();
+    gc_cnn_training_fc2d();
+    return 0;
+#endif
+
 
     //fullyconnected_test();
     cnn_training_test_mnist();

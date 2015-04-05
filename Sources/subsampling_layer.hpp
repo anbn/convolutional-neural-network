@@ -18,6 +18,13 @@ public:
         std::cout<<"DEBUG: subsampling_layer(" <<in_width_<<","<<out_width_<<","<<feature_maps_<<","<<block_size_<<") block_size:"<<block_size_<<"\n";
         
         assert(in_width == out_width*block_size);
+
+        /* store activation values */
+        pool_val_.resize(out_dim_);
+
+#if POOLING_MAX
+        mask_is_max.resize(in_width_);
+#endif
     }
 
     void forward(const vec_t& in /*[in_feature_map * in_width_ * in_width_]*/) {
@@ -30,24 +37,26 @@ public:
                 for (uint_t oy=0; oy<out_width_; oy++) {
 
 #if POOLING_AVG
-                    float_t sum_block = 0.0;
+                    float_t val = 0.0;
                     for (uint_t bx=0; bx<block_size_; bx++) {
                         for (uint_t by=0; by<block_size_; by++) {
-                            sum_block += in[(fm*in_width_ + (block_size_*ox+bx))*in_width_ + (block_size_*oy+by)];
+                            val += in[(fm*in_width_ + (block_size_*ox+bx))*in_width_ + (block_size_*oy+by)];
                         }
                     }
 #elif POOLING_MAX
-                    float_t sum_block = in[(fm*in_width_ + (block_size_*ox+0))*in_width_ + (block_size_*oy+0)];
+                    float_t val = in[(fm*in_width_ + (block_size_*ox+0))*in_width_ + (block_size_*oy+0)];
                     for (uint_t bx=0; bx<block_size_; bx++) {
                         for (uint_t by=0; by<block_size_; by++) {
-                            sum_block = std::max(sum_block, in[(fm*in_width_ + (block_size_*ox+bx))*in_width_ + (block_size_*oy+by)]);
+                            val = std::max(val, in[(fm*in_width_ + (block_size_*ox+bx))*in_width_ + (block_size_*oy+by)]);
                         }
                     }
 #else
                     std::cout<<"Error: no pooling method defined.\n";
                     exit(1);
 #endif
-                    output_[(fm*out_width_ + ox)*out_width_ + oy] = A_.f( weights_[fm]*sum_block + bias_[fm] );
+                    uint_t idx = (fm*out_width_ + ox)*out_width_ + oy;
+                    pool_val_[idx] = val; /* store activation values for backpropagation */
+                    output_[idx] = A_.f( weights_[fm]*val + bias_[fm] );
                 }
             }
         }
@@ -58,8 +67,12 @@ public:
         assert(fm < feature_maps_);
         assert(ix < in_width_);
         assert(iy < in_width_);
-        
+#if POOLING_AVG        
         return delta_[(fm*out_width_ + ix/2)*out_width_ + iy/2] * weights_[fm];
+#elif POOLING_MAX
+        return mask_is_max[(fm*in_width_ + ix)*in_width_ + iy] ? 
+                delta_[(fm*out_width_ + ix/2)*out_width_ + iy/2] * weights_[fm] : 0.0;
+#endif
     }
     
     void backward(const vec_t& in, bool is_update) {
@@ -70,47 +83,29 @@ public:
 
         for (uint_t fm=0; fm<feature_maps_; fm++) {
 
-            float_t sum = 0.0;
+            float_t sum_pool = 0.0;
             float_t sum_delta = 0.0;
             for (uint_t ox=0; ox<out_width_; ox++) {
                 for (uint_t oy=0; oy<out_width_; oy++) {
+                    uint_t idx = (fm*out_width_+ ox)*out_width_ + oy;
+                    delta_[idx] = A_.df(output_[idx]) * next_layer_->in_delta_sum(fm,ox,oy);
 
-                    const uint_t out_index = (fm*out_width_+ ox)*out_width_ + oy;
-                    delta_[out_index] = A_.df(output_[out_index]) * next_layer_->in_delta_sum(fm,ox,oy);
-                    sum_delta += delta_[out_index]; 
-#if POOLING_AVG
-                    float_t sum_block = 0.0;
-                    for (uint_t bx=0; bx<block_size_; bx++) {
-                        for (uint_t by=0; by<block_size_; by++) {
-                            sum_block += in[(fm*in_width_ + (block_size_*ox+bx  ))*in_width_ + (block_size_*oy+by  )];
-                        }
-                    }
-#elif POOLING_MAX
-                    float_t sum_block = in[(fm*in_width_ + (block_size_*ox+0  ))*in_width_ + (block_size_*oy+0  )];
-                    for (uint_t bx=0; bx<block_size_; bx++) {
-                        for (uint_t by=0; by<block_size_; by++) {
-                            sum_block = std::max(sum_block, in[(fm*in_width_ + (block_size_*ox+bx  ))*in_width_ + (block_size_*oy+by  )]);
-                        }
-                    }
-#else
-                    std::cout<<"Error: no pooling method defined.\n";
-                    exit(1);
-#endif
-                    sum += sum_block * delta_[out_index];
+                    sum_pool += pool_val_[idx] * delta_[idx];
+                    sum_delta += delta_[idx]; 
                 }
             }
 
-            batch_gradient_weights_[fm] += sum;
+            batch_gradient_weights_[fm] += sum_pool;
             batch_gradient_bias_[fm] += sum_delta;
 
             if ( is_update ) {
 #if GRADIENT_CHECK
-                gc_gradient_weights_[fm] = sum;
+                gc_gradient_weights_[fm] = sum_pool;
                 gc_gradient_bias_[fm] = sum_delta;
 #elif TRAINING_MOMENTUM
                 float_t w = weights_[fm];
                 weights_[fm] = weights_[fm]
-                    - learning_rate_*sum
+                    - learning_rate_*sum_pool
                     + momentum_ * mom_weights_[fm]
                     - learning_rate_ * decay_ * weights_[fm];
                 mom_weights_[fm] = weights_[fm] - w;
@@ -122,8 +117,8 @@ public:
                     - learning_rate_ * decay_ * bias_[fm];
                 mom_bias_[fm] = bias_[fm] - b;
 #elif TRAINING_ADADELTA
-                ad_acc_gradient_weights_[fm] = ad_ro_*ad_acc_gradient_weights_[fm] + (1-ad_ro_)*sum*sum;
-                float_t ad_update = - sqrt((ad_acc_updates_weights_[fm]+ad_epsilon_)/(ad_acc_gradient_weights_[fm]+ad_epsilon_)) * sum;
+                ad_acc_gradient_weights_[fm] = ad_ro_*ad_acc_gradient_weights_[fm] + (1-ad_ro_)*sum_pool*sum_pool;
+                float_t ad_update = - sqrt((ad_acc_updates_weights_[fm]+ad_epsilon_)/(ad_acc_gradient_weights_[fm]+ad_epsilon_)) * sum_pool;
                 ad_acc_updates_weights_[fm] = ad_ro_*ad_acc_updates_weights_[fm] + (1-ad_ro_)*ad_update*ad_update;
                 weights_[fm] = weights_[fm]+ad_update;
 
@@ -134,7 +129,6 @@ public:
 #endif
                 batch_gradient_weights_[fm] = 0.0;
                 batch_gradient_bias_[fm] = 0.0;
-
             }
         }
     }
@@ -146,6 +140,13 @@ private:
     uint_t feature_maps_;   /* feature_maps_ == in_feature_maps_ == out_feature_maps_ */
     uint_t block_size_;
     uint_t in_width_, out_width_;
+
+    vec_t pool_val_;
+
+#if POOLING_MAX
+    std::vector<bool> mask_is_max;
+#endif
+
 };
 
 } /* namespace nn */

@@ -128,7 +128,7 @@ protected:
     
 #elif TRAINING_ADADELTA
     /* learning parameters for SGD with adadelta */
-    float_t ad_epsilon_ = 1e-9;
+    float_t ad_epsilon_ = 1e-6;
     float_t ad_ro_ = 0.95;
 
     vec_t ad_acc_gradient_weights_;

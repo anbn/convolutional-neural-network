@@ -14,6 +14,7 @@ public:
           in_width_(in_width)
     {
         std::cout<<"DEBUG: fullyconnected_layer(" <<in_width<<","<<out_dim<<","<<in_feature_maps<<")\n";
+        reset_weights(in_dim_);
     }
 
     fullyconnected_layer(uint_t in_len, uint_t out_dim)

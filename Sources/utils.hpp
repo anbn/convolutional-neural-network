@@ -17,7 +17,7 @@ inline T get_random(T min, T max) {
 }
 
 template<typename Iter>
-void randomize(Iter begin, Iter end, float_t min, float_t max) {
+void get_random(Iter begin, Iter end, float_t min, float_t max) {
     for (Iter it = begin; it != end; ++it) 
         *it = get_random(min, max);
 }

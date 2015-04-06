@@ -20,7 +20,7 @@ gc_fullyconnected()
     nn.add_layer(&L3);
 
     vec_t input(4), soll(4);
-    randomize(input.begin(), input.end(), 0, 1);
+    get_random(input.begin(), input.end(), 0, 1);
     for (auto& v : input) {
         v = v<0.5 ? 0 : 1;
     }

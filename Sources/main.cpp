@@ -16,7 +16,7 @@
 #define TRAINING_MOMENTUM   1
 #define TRAINING_ADADELTA   0
 
-#define BATCH_SIZE         10
+#define BATCH_SIZE          1
 
 /*----------------------------------------------------------------------------*/
 
@@ -59,7 +59,7 @@ fullyconnected_test()
     nn::float_t moving_error = 1.0;
     for(int s=0; s<1000000; s++) {
 
-        randomize(input.begin(), input.end(), 0, 1);
+        get_random(input.begin(), input.end(), 0, 1);
         for (auto& v : input) {
             v = v<0.5 ? -1 : 1;
         }
@@ -120,7 +120,7 @@ cnn_training_test_mnist()
 {
     const int steps = 100000;
     mnist_reader mnist_train;
-    mnist_train.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 0);
+    mnist_train.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 60000);
     gnuplot gp("error.txt");
     gp.init_plot("error");
 

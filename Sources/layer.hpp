@@ -20,11 +20,12 @@ public:
     layer* next_layer() const { return next_layer_; }
     layer* prev_layer() const { return prev_layer_; }
 
-    void resetWeights() {
-        randomize(std::begin(weights_), std::end(weights_), -0.5, 0.5);
-        randomize(std::begin(bias_), std::end(bias_), -0.0, 0.0);
-        std::fill(std::begin(batch_gradient_weights_), std::end(batch_gradient_weights_),0);
-        std::fill(std::begin(batch_gradient_bias_), std::end(batch_gradient_bias_),0);
+    void reset_weights(float_t sample) {
+        get_random(std::begin(weights_), std::end(weights_), -1.0/sqrt(sample), 1.0/sqrt(sample));
+        std::cout<<"  sample from "<<sample<<" ["<<-sqrt(1.0/sample)<<", "<<sqrt(1.0/sample)<<"]\n";
+        std::fill(std::begin(bias_), std::end(bias_), 0.0);
+        std::fill(std::begin(batch_gradient_weights_), std::end(batch_gradient_weights_), 0.0);
+        std::fill(std::begin(batch_gradient_bias_), std::end(batch_gradient_bias_), 0.0);
     }
 
     void set_next_layer(layer* next_layer) { 
@@ -74,7 +75,7 @@ protected:
         batch_gradient_weights_.resize(weights_dim);
         batch_gradient_bias_.resize(bias_dim);
 
-        resetWeights();
+        dropout_sample_.resize(in_dim);
 
 #if GRADIENT_CHECK
         gc_gradient_weights_.resize(weights_dim);
@@ -90,10 +91,10 @@ protected:
         ad_acc_updates_weights_.resize(weights_dim);
         ad_acc_gradient_bias_.resize(bias_dim);
         ad_acc_updates_bias_.resize(bias_dim);
-        std::fill(std::begin(ad_acc_gradient_weights_),std::end(ad_acc_gradient_weights_), 0);
-        std::fill(std::begin(ad_acc_updates_weights_),std::end(ad_acc_updates_weights_), 0);
-        std::fill(std::begin(ad_acc_gradient_bias_),std::end(ad_acc_gradient_bias_), 0);
-        std::fill(std::begin(ad_acc_updates_bias_),std::end(ad_acc_updates_bias_), 0);
+        std::fill(std::begin(ad_acc_gradient_weights_),std::end(ad_acc_gradient_weights_), 0.0);
+        std::fill(std::begin(ad_acc_updates_weights_),std::end(ad_acc_updates_weights_), 0.0);
+        std::fill(std::begin(ad_acc_gradient_bias_),std::end(ad_acc_gradient_bias_), 0.0);
+        std::fill(std::begin(ad_acc_updates_bias_),std::end(ad_acc_updates_bias_), 0.0);
 #endif
     }
     
@@ -111,6 +112,13 @@ protected:
 
     vec_t batch_gradient_weights_;
     vec_t batch_gradient_bias_;
+
+    float_t dropout_prob_;
+    vec_t dropout_sample_;
+
+    void sample_dropout() {
+        get_random(std::begin(dropout_sample_), std::end(dropout_sample_), 0.0, 1.0);
+    }
 
 #if GRADIENT_CHECK
     vec_t gc_gradient_weights_,

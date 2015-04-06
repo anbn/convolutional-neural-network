@@ -19,6 +19,8 @@ public:
         
         assert(in_width == out_width*block_size);
 
+        reset_weights(feature_maps_);
+
         /* store activation values */
         pool_val_.resize(out_dim_);
 #if POOLING_MAX

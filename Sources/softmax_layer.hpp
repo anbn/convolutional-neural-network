@@ -8,7 +8,7 @@ class softmax_layer : public output_layer {
 public:
 
     softmax_layer(uint_t in_dim)
-        : output_layer(in_dim, in_dim, 0, 0) /* in_dim == out_dim, no weights, no bias */
+        : output_layer(in_dim, in_dim, 0, 0) /* in_dim, out_dim==in_dim, no weights, no bias */
     {
         std::cout<<"DEBUG: softmax_layer(" <<in_dim<<")\n";
     }

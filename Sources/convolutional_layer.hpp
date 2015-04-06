@@ -18,8 +18,11 @@ public:
         assert(in_width_>=out_width_);
 
         std::cout<<"DEBUG: convolutional_layer(" <<in_width_<<","<<out_width_<<","<<in_feature_maps_<<","<<out_feature_maps_<<") filter_width:"<<filter_width_<<"\n";
+
+        /* initialize connection table */
         connected_.resize(in_feature_maps_*out_feature_maps);
         std::fill(std::begin(connected_), std::end(connected_), true);
+        reset_weights(filter_width_*filter_width_*in_feature_maps_);
     }
 
     uint_t out_feature_maps() const { return out_feature_maps_; }

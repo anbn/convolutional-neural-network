@@ -1,7 +1,7 @@
 # Next Steps
 
 * Dropout layer
-* implement Stride
+* implement Stride and Padding
 
 ## Nice to have
 

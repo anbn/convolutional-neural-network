@@ -28,6 +28,10 @@ public:
         std::fill(std::begin(batch_gradient_bias_), std::end(batch_gradient_bias_), 0.0);
     }
 
+    void sample_dropout() {
+        get_random(std::begin(dropout_sample_), std::end(dropout_sample_), 0.0, 1.0);
+    }
+
     void set_next_layer(layer* next_layer) { 
         assert(next_layer!=nullptr);
 #if VERBOSE
@@ -45,6 +49,9 @@ public:
     virtual float_t in_delta_sum(uint_t fm, uint_t ix, uint_t iy) const = 0;
     virtual void forward(const vec_t& in) = 0;
     virtual void backward(const vec_t& in, bool is_update) = 0;
+
+    float_t dropout_prob() { return dropout_prob_; }
+    void set_dropout_prob(float_t v) { dropout_prob_ = v; }
 
 #if GRADIENT_CHECK
     float_t gc_gradient_weights(uint_t i) const { return gc_gradient_weights_[i]; }
@@ -75,7 +82,7 @@ protected:
         batch_gradient_weights_.resize(weights_dim);
         batch_gradient_bias_.resize(bias_dim);
 
-        dropout_sample_.resize(in_dim);
+        dropout_sample_.resize(out_dim_);
 
 #if GRADIENT_CHECK
         gc_gradient_weights_.resize(weights_dim);
@@ -113,12 +120,9 @@ protected:
     vec_t batch_gradient_weights_;
     vec_t batch_gradient_bias_;
 
-    float_t dropout_prob_;
-    vec_t dropout_sample_;
-
-    void sample_dropout() {
-        get_random(std::begin(dropout_sample_), std::end(dropout_sample_), 0.0, 1.0);
-    }
+    /* no dropout by default */
+    float_t dropout_prob_ = 0.0;
+    vec_t   dropout_sample_;
 
 #if GRADIENT_CHECK
     vec_t gc_gradient_weights_,

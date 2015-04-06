@@ -24,7 +24,16 @@ public:
     void forward(const vec_t& in) {
         assert(in.size() == in_dim_);
 
+        if (dropout_prob_ > 0.0)
+            sample_dropout();
+        
         for (uint_t o=0; o<out_dim_; o++) {
+
+            /* dropout while training: [0,1), dropout while testing: 1 */
+            if (dropout_prob_!= 0 && dropout_prob_!=1 && dropout_sample_[o]<dropout_prob_) {
+                output_[o] = 0.0;
+                continue;
+            }
             
             float_t sum=0.0;
             for (uint_t ix=0; ix<in_width_; ix++) {
@@ -35,6 +44,11 @@ public:
                     }
                 }
             }
+            
+            /* dropout while testing */
+            if (dropout_prob_==1)
+                sum = sum*0.5;
+
             output_[o] = ActFunc.f(sum + bias_[o]);
         }
     }

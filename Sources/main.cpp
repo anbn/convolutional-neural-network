@@ -23,7 +23,6 @@
 #include "network.hpp"
 #include "image.hpp"
 #include "mnist_reader.hpp"
-//#include "orl_reader.hpp"
 #include "test.hpp"
 #include "gnuplot.hpp"
 
@@ -118,9 +117,9 @@ nn::float_t mnist_rate(neural_network &nn)
 void
 cnn_training_test_mnist()
 {
-    const int steps = 100000;
+    const int steps = 120000;
     mnist_reader mnist_train;
-    mnist_train.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", 60000);
+    mnist_train.read("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", std::min(steps, 60000));
     gnuplot gp("error.txt");
     gp.init_plot("error");
 
@@ -153,17 +152,16 @@ cnn_training_test_mnist()
     nn.add_layer(&O5);
     nn.add_layer(&M6);
     
-#if TRAINING_MOMENTUM
-    nn.set_learning_rate(0.00085);
-#endif
     vec_t soll {0,0,0,0,0,0,0,0,0,0};
     int last_label = 0;
-    for(int s=0; s<steps; s++) {
+    for(int s=1; s<=steps; s++) {
         
         
+        S4.set_dropout_prob(0.5);
 #if TRAINING_MOMENTUM
-        if (s!=0 && s%1000==0)
-            nn.set_learning_rate(nn.learning_rate()*0.85);
+        if (s%1000==0) {
+            nn.set_learning_rate( s==0? 0.00085 : nn.learning_rate()*0.85);
+        }
 #endif
         
         int num_example = s % mnist_train.num_examples();
@@ -189,6 +187,7 @@ cnn_training_test_mnist()
 #if 1
         /* test on mnist test set */
         if( s!=0 && s%5000==0 ) {
+            S4.set_dropout_prob(1);
             std::cout<<"Step "<<s<<"\n";
             mnist_rate(nn);
         }
@@ -214,7 +213,6 @@ cnn_training_test_mnist()
             img_m6.toIntensity().exportMat().copyTo(img(cv::Rect(251,0,img_m6.width(), img_m6.height())));
             img_so.toIntensity().exportMat().copyTo(img(cv::Rect(252,0,img_so.width(), img_so.height())));
             cv::imshow("cnn", img);
-
 #if 0
             /* show weights */
             cv::Mat img_weights(cv::Size(400,500), CV_8UC1, 100);

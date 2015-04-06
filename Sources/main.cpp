@@ -13,10 +13,10 @@
 #define POOLING_AVG         1
 #define POOLING_MAX         0
 
-#define TRAINING_MOMENTUM   1
-#define TRAINING_ADADELTA   0
+#define TRAINING_MOMENTUM   0
+#define TRAINING_ADADELTA   1
 
-#define BATCH_SIZE          1
+#define BATCH_SIZE         20
 
 /*----------------------------------------------------------------------------*/
 

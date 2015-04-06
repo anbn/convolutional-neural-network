@@ -22,7 +22,7 @@ public:
 
     void reset_weights(float_t sample) {
         get_random(std::begin(weights_), std::end(weights_), -1.0/sqrt(sample), 1.0/sqrt(sample));
-        std::cout<<"  sample from "<<sample<<" ["<<-sqrt(1.0/sample)<<", "<<sqrt(1.0/sample)<<"]\n";
+        std::cout<<"  sample from "<<sample<<" ["<<-1.0/sqrt(sample)<<", "<<1.0/sqrt(sample)<<"]\n";
         std::fill(std::begin(bias_), std::end(bias_), 0.0);
         std::fill(std::begin(batch_gradient_weights_), std::end(batch_gradient_weights_), 0.0);
         std::fill(std::begin(batch_gradient_bias_), std::end(batch_gradient_bias_), 0.0);

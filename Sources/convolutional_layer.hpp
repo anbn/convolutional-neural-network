@@ -43,10 +43,19 @@ public:
         assert(in.size() == in_feature_maps_ * in_width_ * in_width_);
         assert(weights_.size() == in_feature_maps_*out_feature_maps_*filter_width_*filter_width_);
 
+        if (dropout_prob_ > 0.0)
+            sample_dropout();
+
         for (uint_t out_fm=0; out_fm<out_feature_maps_; out_fm++) {
 
             for (uint_t ox=0; ox<out_width_; ox++) {
                 for (uint_t oy=0; oy<out_width_; oy++) {
+
+                    /* dropout while training: [0,1), dropout while testing: 1 */
+                    if (dropout_prob_!= 0 && dropout_prob_!=1 && dropout_sample_[(out_fm*out_width_+ ox)*out_width_ + oy]<dropout_prob_) {
+                        output_[(out_fm*out_width_+ ox)*out_width_ + oy] = 0.0;
+                        continue;
+                    }
 
                     float_t sum = 0.0;
                     for (uint_t in_fm=0; in_fm<in_feature_maps_; in_fm++) {
@@ -61,6 +70,10 @@ public:
                             }
                         }
                     }
+                    /* dropout while testing */
+                    if (dropout_prob_==1)
+                        sum = sum*0.5;
+
                     output_[(out_fm*out_width_+ ox)*out_width_ + oy] = A_.f(sum + bias_[out_fm]);
                 }
             }

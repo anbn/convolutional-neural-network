@@ -155,9 +155,8 @@ cnn_training_test_mnist()
     vec_t soll {0,0,0,0,0,0,0,0,0,0};
     int last_label = 0;
     for(int s=1; s<=steps; s++) {
-        
-        
-        S4.set_dropout_prob(0.5);
+
+        S4.set_dropout_prob(0.9);
 #if TRAINING_MOMENTUM
         if (s%1000==0) {
             nn.set_learning_rate( s==0? 0.00085 : nn.learning_rate()*0.85);

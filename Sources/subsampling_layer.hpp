@@ -29,8 +29,10 @@ public:
     }
 
     void forward(const vec_t& in /*[in_feature_map * in_width_ * in_width_]*/) {
-        
         assert(in.size() == feature_maps_ * in_width_ * in_width_);
+        
+        if (dropout_prob_ > 0.0)
+            sample_dropout();
 
         for (uint_t fm=0; fm<feature_maps_; fm++) {
             

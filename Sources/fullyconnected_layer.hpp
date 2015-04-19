@@ -47,7 +47,7 @@ public:
             
             /* dropout while testing */
             if (dropout_prob_==1)
-                sum = sum*0.5;
+                sum = sum*0.1;
 
             output_[o] = ActFunc.f(sum + bias_[o]);
         }
